@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "medtracker"
+version = "0.1.0"
+description = ""
+authors = ["zhihuai1982 <zhihuai1982@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11.0,<3.13.0"
+selenium = "^4.14.0"
+py-trello = "^0.19.0"
+pandas = "^2.1.1"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.25.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[[tool.poetry.source]]
+name = "tsinghua"
+priority = "default"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
