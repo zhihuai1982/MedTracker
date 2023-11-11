@@ -283,7 +283,18 @@ def consultation(hDocuList):
         df = pd.DataFrame(data, index=[0])
         dfs.append(df)
 
-    return pd.concat(dfs, ignore_index=True).to_html()
+    consultationRes = pd.concat(dfs, ignore_index=True)
+
+    # 根据会诊时间逆序排列
+    consultationRes = consultationRes.sort_values(by='会诊时间', ascending=False)
+
+    def highlight_today(row):
+        if (datetime.datetime.now().date() - pd.to_datetime(row['会诊时间']).date()).days <= 9:
+            return ['background-color: yellow']*len(row)
+        else:
+            return ['']*len(row)
+
+    return consultationRes.style.apply(highlight_today, axis=1).to_html()
 
 # %%
 # 体温
