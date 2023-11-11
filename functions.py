@@ -58,8 +58,18 @@ def get_lab_results(mrn, duration):
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
- 
-    return df.style.apply(highlight_today, axis=1).to_html()
+
+   # 创建一个包含重点检验结果名称的列表
+    important_tests = ["红细胞计数","甘油三脂", "白细胞计数"]
+
+    # 定义一个函数，该函数检查一个值是否在重点检验结果名称列表中
+    def highlight_important_tests(val):
+        if val['xmmc'] in important_tests:
+            return ['color: red']*len(val)
+        else:
+            return ['']*len(val)    
+
+    return df.style.apply(highlight_important_tests, axis=1).apply(highlight_today, axis=1).to_html()
 
 # df = get_lab_results(4878420, 30)
 # print(df)
