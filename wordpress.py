@@ -20,7 +20,7 @@ query = {
     'token': 'ATTAae59e22e7d144839c54a444aa4f24d4f3ede09405b11ace472e773a78a23b0e8F2D629A2',
 }
 
-headers = {
+trelloheaders = {
     "Accept": "application/json"
 }
 
@@ -30,7 +30,7 @@ headers = {
 tpListRaw = requests.request(
     "GET",
     "https://api.trello.com/1/boards/65296c002df7c2c909517c4e/lists",
-    headers=headers,
+    headers=trelloheaders,
     params=query,
     verify = False,
 ).json()
@@ -126,7 +126,7 @@ for index, row in pList.iterrows():
     pContent += get_nurse_doc(row['mrn'],row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>医嘱</h3>\n<!-- /wp:heading -->\n"
-    pContent += get_order(row['mrn'],row['series'])
+    pContent += get_order(row['mrn'],row['series'],row['id'],query)
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>手术记录</h3>\n<!-- /wp:heading -->\n"
     pContent += surgicalRecord(hDocuList)

@@ -185,7 +185,7 @@ def get_nurse_doc(mrn, series):
 # http://20.21.1.224:5537/api/api/EmrCope/getPatientOrder/4878420/17/40/true
 
 
-def get_order(mrn, series):
+def get_order(mrn, series, idList, query):
     orderUrl = f"http://20.21.1.224:5537/api/api/EmrCope/getPatientOrder/{mrn}/{series}/40/true"
 
     response = requests.get(orderUrl).json()
@@ -196,11 +196,50 @@ def get_order(mrn, series):
     df = pd.DataFrame(response)[
         ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'duration']]
     # convert datestop column to timestamp object
+    # 保留未停医嘱
     df['datestop'] = pd.to_datetime(df['datestop'])
     df = df[df['datestop'] > pd.Timestamp.now()]
+    
     df = df[df['orderflag1'] != 'NSC']
 
-    return df[['drname', 'ordertype', 'dosage', 'frequency', 'duration']].to_html()
+    # 计算剩余时间
+    df['dateleft'] = df['datestop'] - pd.Timestamp.now()
+
+    # 定义一个函数，该函数会检查一个日期是否是今天的日期
+    def highlight_today(row):
+        if row['dateleft'] < pd.Timedelta(hours=12):
+            return ['background-color: yellow']*len(row)
+        else:
+            return ['']*len(row)
+
+    # 抗生素列表
+    antibioticList = ['[集采]头孢他啶针 1gX1','哌拉西林']
+
+    # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 小于 12 小时，则打印“抗生素即将停止使用，请注意！”
+    if not df[df['drname'].isin(antibioticList) & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
+        # print("抗生素即将停止使用，请注意！")
+        response = requests.request(
+            "GET",
+            f"https://api.trello.com/1/lists/{idList}/cards",
+            headers = { "Accept": "application/json" },
+            params= query).json()
+        # 如果 response 里的 name 列不含“抗生素即将停止使用，请注意！”，则创建新卡片
+        if not any("抗生素即将停止使用，请注意！" in d['name'] for d in response):
+            requests.request(
+                "POST",
+                "https://api.trello.com/1/cards",
+                headers = { "Accept": "application/json" },
+                params= dict({"idList": idList,
+                            "name": "抗生素即将停止使用，请注意！"},
+                            **query)
+                )
+    
+    ignoreList = ['饮水大于1500ML/日（如无禁忌）','早期下床活动（如无禁忌）','宣教预防VTE相关知识','氯化钠注射液 0.9%:100mlX1']
+
+    # 如果df的drname列包含ignoreList中的元素，则删除该行
+    df = df[~df['drname'].isin(ignoreList)]
+
+    return df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft']].style.apply(highlight_today, axis=1).to_html()
 
 
 # %%
@@ -289,7 +328,7 @@ def consultation(hDocuList):
     consultationRes = consultationRes.sort_values(by='会诊时间', ascending=False)
 
     def highlight_today(row):
-        if (datetime.datetime.now().date() - pd.to_datetime(row['会诊时间']).date()).days <= 9:
+        if (datetime.datetime.now().date() - pd.to_datetime(row['会诊时间']).date()).days <= 2:
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
