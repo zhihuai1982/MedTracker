@@ -104,10 +104,18 @@ def get_exam_results(mrn, duration):
     # print(totalExamRes)
 
     df = pd.DataFrame(totalExamRes)
+    df = df.sort_values(by='repdate', ascending=False)
     df['repdate'] = pd.to_datetime(df['repdate'])
     df['repdate'] = df['repdate'].dt.strftime('%Y%m%d')
 
-    return df.to_html()
+    # 定义一个函数，该函数会检查一个日期是否是今天的日期
+    def highlight_today(row):
+        if pd.to_datetime(row['repdate']).date() == datetime.datetime.now().date():
+            return ['background-color: yellow']*len(row)
+        else:
+            return ['']*len(row)
+ 
+    return df.style.apply(highlight_today, axis=1).to_html()
 
 
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/4310592/11/emr").json()
