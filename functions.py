@@ -6,10 +6,8 @@ import dateutil.relativedelta as rd
 import datetime 
 
 
-
+# %%
 # 根据住院号获得检查列表
-
-
 def get_lab_results(mrn, duration):
     hLabList = requests.get(
         f"http://20.21.1.224:5537/api/api//LisReport/GetLisReportIndexHalf/{mrn}/1").json()
@@ -48,9 +46,22 @@ def get_lab_results(mrn, duration):
             return group[group['zdbz'].replace('', pd.NA).notnull()]
 
     df = df.groupby('checkitem').apply(process_group).reset_index(drop=True)
-    return df.to_html()
 
-# df = get_lab_results(4878420)
+    # 将df按照dodate由大到小逆向排序
+    df = df.sort_values(by='dodate', ascending=False)
+    # 将dodate转换成日期格式
+    df['dodate'] = pd.to_datetime(df['dodate']).dt.strftime('%Y-%m-%d')
+
+    # 定义一个函数，该函数会检查一个日期是否是今天的日期
+    def highlight_today(row):
+        if pd.to_datetime(row['dodate']).date() == datetime.datetime.now().date():
+            return ['background-color: yellow']*len(row)
+        else:
+            return ['']*len(row)
+ 
+    return df.style.apply(highlight_today, axis=1).to_html()
+
+# df = get_lab_results(4878420, 30)
 # print(df)
 
 # %%
