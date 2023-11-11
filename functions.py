@@ -370,12 +370,18 @@ def surgical_arrange_check():
     # 获取今天是星期几（0=星期一，6=星期日）
     weekday = today.weekday()
 
-    if 3 <= weekday <= 4:  # 如果今天是周四到周五的其中一天
-        fromDay = today + rd.relativedelta(weekday=rd.TH)  # 这周四
-        toDay = fromDay + datetime.timedelta(days=1)  # 周五
-    else:  # 如果今天是上周六到这周三的其中一天
-        fromDay = today + rd.relativedelta(weekday=rd.SA(-1))  # 上周六
-        toDay = today + rd.relativedelta(weekday=rd.WE)  # 这周三
+    if weekday == 3:  
+        fromDay = today  # 这周四
+        toDay = today + rd.relativedelta(weekday=rd.FR)  # 周五
+    elif weekday == 4:  # 如果今天是上周六到这周三的其中一天
+        fromDay = today + rd.relativedelta(weekday=rd.TH(-1))  # 周四
+        toDay = today # 这周三
+    elif weekday == 5:
+        fromDay = today  
+        toDay = today + rd.relativedelta(weekday=rd.WE)
+    else:
+        fromDay = today + rd.relativedelta(weekday=rd.SA(-1))
+        toDay = today + rd.relativedelta(weekday=rd.WE)
 
     # 将日期格式化为字符串
     fromDay_str = fromDay.strftime('%Y-%m-%d')
