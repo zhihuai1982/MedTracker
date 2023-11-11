@@ -61,9 +61,29 @@ headers = {
 pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(tpList), on='mrn', how='left')
 
 
-# %% 遍历plist, 获取患者信息
+# %% 
 
 pContent = ""
+
+pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>备注</h1>\n<!-- /wp:heading -->\n"
+
+for index, row in pList.iterrows():
+    
+    noteUrl = f"https://api.trello.com/1/lists/{row['id']}/cards"
+
+    response = requests.request(
+    "GET",
+    noteUrl,
+    headers=headers,
+    params=query
+    ).json()
+
+    # 根据response结果，构建html列表，文字为name列，链接为shortUrl
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'>{row['name']}</h4>\n<!-- /wp:heading -->\n"
+    for item in response:
+        pContent += f'<li><a href="{item["shortUrl"]}" target="_blank">{item["name"]}</a></li>\n'
+
+# %% 遍历plist, 获取患者信息
 
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>每日更新</h1>\n<!-- /wp:heading -->\n"
 
@@ -81,8 +101,12 @@ for index, row in pList.iterrows():
         duration = 30
 
     hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{row['mrn']}/{row['series']}/emr", headers=headers).json()
-        
+ 
     pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{row['name']}</h2>\n<!-- /wp:heading -->\n"
+
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>备注</h3>\n<!-- /wp:heading -->\n"
+
+    pContent += f"<!-- wp:shortcode --> [note_form idlist='{row['id']}'] <!-- /wp:shortcode -->\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
     pContent += get_lab_results(row['mrn'], duration)
