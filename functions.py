@@ -360,26 +360,137 @@ def consultation(hDocuList):
 # 体温
 
 
-def temp():
-    tempUrl = "http://20.21.1.224:5537/api/api/Physiorcd/GetPhysiorcdNsRef/5374115/8"
+def temp_glucose_chart(mrn, series):
+
+    tempUrl = f"http://20.21.1.224:5537/api/api/Physiorcd/GetPhysiorcdNsRef/{mrn}/{series}"
 
     response = requests.get(tempUrl).json()
+
+    if not response:
+        return "No match found"
 
     # 将response转换为dataframe
     # 筛选出content列包含“体温”的行
     # 筛选出pointInTimel和content列
     # 获取字符串“:36.8℃”中的“36.8”，并转换为数字格式保存至temp列
     df = pd.DataFrame(response)
-    df = df[df['content'].str.contains("体温", na=False)][[
-        'pointInTimel', 'content']]
-    df['pointInTimel'] = pd.to_datetime(df['pointInTimel'])
-    import re
+    # 将 pointInTimel 列的时间转换为时间戳（以毫秒为单位）
+    df['pointInTimel_utc'] = pd.to_datetime(df['pointInTimel']).dt.tz_localize('UTC').astype('int64') // 10**6
 
-    # 使用正则表达式获取字符串中的数字部分
-    df['temp'] = df['content'].str.extract(r'(\d+\.\d+)')
+    temp_df = df[df['content'].str.contains("体温", na=False)]
+    # 如果 temp_df 为空，则返回空值
+    if temp_df.empty:
+        return "No match found" 
+    
+    # 创建 temp_df 的副本
+    temp_df = df[df['content'].str.contains("体温", na=False)].copy()
+
+    # 使用正则表达式获取字符串中的数字部分, 并保存到temp列
+    temp_df.loc[:, 'temp'] = temp_df['content'].str.extract(r'(\d+\.?\d+)')
 
     # 将temp列中的字符串转换为数字格式
-    df['temp'] = pd.to_numeric(df['temp'])
+    temp_df.loc[:, 'temp'] = pd.to_numeric(temp_df['temp'])
+
+    temp_data = temp_df[['pointInTimel_utc', 'temp']].values.tolist()
+
+    temp_data_str = ', '.join(str(pair) for pair in temp_data)
+    # %%
+    # 血糖
+    glucose_df = df[df['content'].str.contains("血糖", na=False)]
+        
+    # 如果 temp_df 为空，则返回空值
+    if glucose_df.empty:
+        return "No match found" 
+
+    # 创建 temp_df 的副本
+    glucose_df = df[df['content'].str.contains("血糖", na=False)].copy()
+
+    # 使用正则表达式获取字符串中的数字部分, 并保存到glucose列
+    glucose_df.loc[:, 'glucose'] = glucose_df['content'].str.extract(r'(\d+\.?\d+)')
+
+    # 将glucose列中的字符串转换为数字格式
+    glucose_df.loc[:, 'glucose'] = pd.to_numeric(glucose_df['glucose'])
+
+    # 删除glucose列为na值的行
+    glucose_df = glucose_df.dropna(subset=['glucose'])
+
+    # 将 pointInTimel 和 temp 列配对保存到列表中
+    glucose_data = glucose_df[['pointInTimel_utc', 'glucose']].values.tolist()
+
+    glucose_data_str = ', '.join(str(pair) for pair in glucose_data)
+
+    temp_glucose_highcharts_js = f"""
+    <div id="container{mrn}" style="width: 600px;height:400px;"></div>
+    <script>
+    Highcharts.chart('container{mrn}', {{
+        xAxis: {{
+            type: 'datetime',
+            labels: {{
+                format: '{{value:%Y-%m-%d %H:%M}}'
+            }}
+        }},
+        yAxis: [{{
+            title: {{
+                text: '体温'
+            }},
+            min: 0,
+            minorGridLineWidth: 0,
+            gridLineWidth: 0,
+            alternateGridColor: null,
+            plotBands: {{ 
+                from:  36,
+                to: 38,
+                color: 'rgba(68, 170, 213, 0.1)',
+                label: {{
+                    text: '体温',
+                    style: {{
+                        color: '#606060'
+                    }}
+                }}
+            }}}}, 
+            {{title: {{
+                text: '血糖'
+            }},
+            min: 0,
+            minorGridLineWidth: 0,
+            gridLineWidth: 0,
+            alternateGridColor: null,
+            opposite: true,
+            plotBands: {{ 
+                from: 7,
+                to: 11,
+                color: 'rgba(68, 170, 213, 0.1)',
+                label: {{
+                    text: '血糖',
+                    style: {{
+                        color: '#606060'
+                    }}
+                }}
+            }}
+        }}],
+        colors: ['#6CF', '#39F', '#06C', '#036', '#000'],
+        tooltip: {{
+        headerFormat: '<b>{{series.name}}</b><br>',
+        pointFormat: '{{point.x:%m-%d %H:%M%p }}: {{point.y:.2f}} ℃'
+        }},
+        series: [
+            {{
+            name: '体温',
+            yAxis: 0,
+            data: [{temp_data_str}]
+        }},
+            {{
+            name: '血糖',
+            yAxis: 1,
+            data: [{glucose_data_str}]
+        }}
+        ]
+    }});
+    </script>
+    """
+    return temp_glucose_highcharts_js
+
+
 
 # 手术安排
 
