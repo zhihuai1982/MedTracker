@@ -215,6 +215,27 @@ def get_order(mrn, series, idList, query):
     # 抗生素列表
     antibioticList = ['[集采]头孢他啶针 1gX1','哌拉西林']
 
+    # workflow
+    # 早上筛查出需要续期抗生素的列表，创建新卡片
+    # 如果在中午前续期的话（续期时间大于48h）则会自动删除抗生素续期卡片，如果在下午续期的话就不会自动删除
+
+    # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 大于 48 小时
+    # 则检查trello里是否有“抗生素停用”card，有的话就删除
+    if not df[df['drname'].isin(antibioticList) & (df['dateleft'] > pd.Timedelta(hours=48))].empty:
+        response = requests.request(
+            "GET",
+            f"https://api.trello.com/1/lists/{idList}/cards",
+            headers = { "Accept": "application/json" },
+            params= query).json()
+        if any("抗生素即将停止使用，请注意！" in d['name'] for d in response):
+            cardId = [d['id'] for d in response if "抗生素即将停止使用，请注意！" in d['name']]
+            requests.request(
+                "DELETE",
+                f"https://api.trello.com/1/cards/{cardId[0]}",
+                headers = { "Accept": "application/json" },
+                params= query
+                )
+
     # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 小于 12 小时，则打印“抗生素即将停止使用，请注意！”
     if not df[df['drname'].isin(antibioticList) & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
         # print("抗生素即将停止使用，请注意！")
