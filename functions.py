@@ -652,10 +652,11 @@ def surgical_arrange_check(pList):
 
         surgicalCheck = surgicalCheck[['mrn','PatientName','PatientSex','PatientAge','Isroom','Diagnose','drremark','Doctor','pname','room','cdo','operp']]
 
-        inpatientCheck = pd.merge(pListLeft, surgicalList, on='mrn', how='left')
+        inpatientCheck = pd.merge(pListLeft, surgicalList, on='mrn', how='left')[['bedid','pname','mrn','diag','room','cdo','operp']]
+
     else:
         surgicalCheck = bookList
-        inpatientCheck = pListLeft
+        inpatientCheck = pListLeft[['bedid','pname','mrn','diag']]
 
 
     return surgicalCheck, inpatientCheck
