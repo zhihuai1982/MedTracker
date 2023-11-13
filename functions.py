@@ -260,6 +260,9 @@ def get_order(mrn, series, idList, query):
     # 如果df的drname列包含ignoreList中的元素，则删除该行
     df = df[~df['drname'].isin(ignoreList)]
 
+    # df 根据 ordertype 和 dateleft 逆序排序
+    df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[True, True])
+
     return df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft']].style.apply(highlight_today, axis=1).to_html()
 
 
