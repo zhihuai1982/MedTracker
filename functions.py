@@ -441,7 +441,7 @@ def highcharts(mrn, series):
             labels: {{
                 enabled: false
             }},
-            min: 18,
+            min: 30,
             max: 40,
             minorGridLineWidth: 0,
             gridLineWidth: 0,
@@ -584,7 +584,7 @@ def highcharts(mrn, series):
 # %%
 # 手术安排
 
-def surgical_arrange_check():
+def surgical_arrange_check(pList):
 
     # 获取今天的日期
     today = datetime.date.today() 
@@ -629,6 +629,9 @@ def surgical_arrange_check():
     bookList = bookList[bookList['NoticeFlag'] != '取消']
     # 将 'mrn' 列转换为字符串类型
     bookList.loc[:, 'mrn'] = bookList['mrn'].astype(str)
+
+    # 删除pList里mrn列与booklist中的mrn列相同的行
+    pListLeft = pList[~pList['mrn'].isin(bookList['mrn'])]
     
     surgicalListRaw= requests.get(
         f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/5/A002/{toDay_str}"
@@ -645,7 +648,11 @@ def surgical_arrange_check():
         surgicalCheck = pd.merge(bookList, surgicalList, on='mrn', how='left')
 
         surgicalCheck = surgicalCheck[['mrn','PatientName','PatientSex','PatientAge','Isroom','Diagnose','drremark','Doctor','pname','room','cdo','operp']]
+
+        inpatientCheck = pd.merge(pListLeft, surgicalList, on='mrn', how='left')
     else:
         surgicalCheck = bookList
+        inpatientCheck = pListLeft
 
-    return surgicalCheck
+
+    return surgicalCheck, inpatientCheck

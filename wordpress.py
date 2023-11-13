@@ -138,9 +138,10 @@ for index, row in pList.iterrows():
 
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
-surgical_arrange_df = surgical_arrange_check()
+surgical_arrange_df, inpatient_arrange_df = surgical_arrange_check(pList)
 
 pContent += surgical_arrange_df.to_html()
+pContent += inpatient_arrange_df.to_html()
 # %%
 
 # 筛选出rj_df里 Isroom为“日间“的列
