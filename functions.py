@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from io import StringIO
 import dateutil.relativedelta as rd
-import datetime 
+import datetime
 
 
 # %%
@@ -60,14 +60,14 @@ def get_lab_results(mrn, duration):
             return ['']*len(row)
 
    # 创建一个包含重点检验结果名称的列表
-    important_tests = ["红细胞计数","甘油三脂", "白细胞计数"]
+    important_tests = ["红细胞计数", "甘油三脂", "白细胞计数"]
 
     # 定义一个函数，该函数检查一个值是否在重点检验结果名称列表中
     def highlight_important_tests(val):
         if val['xmmc'] in important_tests:
             return ['color: red']*len(val)
         else:
-            return ['']*len(val)    
+            return ['']*len(val)
 
     return df.style.apply(highlight_important_tests, axis=1).apply(highlight_today, axis=1).to_html()
 
@@ -124,7 +124,7 @@ def get_exam_results(mrn, duration):
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
- 
+
     return df.style.apply(highlight_today, axis=1).to_html()
 
 
@@ -132,8 +132,8 @@ def get_exam_results(mrn, duration):
 def get_preAnesth(hDocuList):
 
     if isinstance(hDocuList, dict):
-        return "No match found" 
- 
+        return "No match found"
+
     # 筛选出hDocuList里docname为“麻醉前访视单”的字典
     hAnesthList = [item for item in hDocuList if item['docname'] == "麻醉前访视单"]
 
@@ -199,7 +199,7 @@ def get_order(mrn, series, idList, query):
     # 保留未停医嘱
     df['datestop'] = pd.to_datetime(df['datestop'])
     df = df[df['datestop'] > pd.Timestamp.now()]
-    
+
     df = df[df['orderflag1'] != 'NSC']
 
     # 计算剩余时间
@@ -213,7 +213,7 @@ def get_order(mrn, series, idList, query):
             return ['']*len(row)
 
     # 抗生素列表
-    antibioticList = ['[集采]头孢他啶针 1gX1','哌拉西林']
+    antibioticList = ['[集采]头孢他啶针 1gX1', '哌拉西林']
 
     # workflow
     # 早上筛查出需要续期抗生素的列表，创建新卡片
@@ -225,16 +225,17 @@ def get_order(mrn, series, idList, query):
         response = requests.request(
             "GET",
             f"https://api.trello.com/1/lists/{idList}/cards",
-            headers = { "Accept": "application/json" },
-            params= query).json()
+            headers={"Accept": "application/json"},
+            params=query).json()
         if any("抗生素即将停止使用，请注意！" in d['name'] for d in response):
-            cardId = [d['id'] for d in response if "抗生素即将停止使用，请注意！" in d['name']]
+            cardId = [d['id']
+                      for d in response if "抗生素即将停止使用，请注意！" in d['name']]
             requests.request(
                 "DELETE",
                 f"https://api.trello.com/1/cards/{cardId[0]}",
-                headers = { "Accept": "application/json" },
-                params= query
-                )
+                headers={"Accept": "application/json"},
+                params=query
+            )
 
     # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 小于 12 小时，则打印“抗生素即将停止使用，请注意！”
     if not df[df['drname'].isin(antibioticList) & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
@@ -242,20 +243,21 @@ def get_order(mrn, series, idList, query):
         response = requests.request(
             "GET",
             f"https://api.trello.com/1/lists/{idList}/cards",
-            headers = { "Accept": "application/json" },
-            params= query).json()
+            headers={"Accept": "application/json"},
+            params=query).json()
         # 如果 response 里的 name 列不含“抗生素即将停止使用，请注意！”，则创建新卡片
         if not any("抗生素即将停止使用，请注意！" in d['name'] for d in response):
             requests.request(
                 "POST",
                 "https://api.trello.com/1/cards",
-                headers = { "Accept": "application/json" },
-                params= dict({"idList": idList,
-                            "name": "抗生素即将停止使用，请注意！"},
+                headers={"Accept": "application/json"},
+                params=dict({"idList": idList,
+                             "name": "抗生素即将停止使用，请注意！"},
                             **query)
-                )
-    
-    ignoreList = ['饮水大于1500ML/日（如无禁忌）','早期下床活动（如无禁忌）','宣教预防VTE相关知识','氯化钠注射液 0.9%:100mlX1']
+            )
+
+    ignoreList = ['饮水大于1500ML/日（如无禁忌）', '早期下床活动（如无禁忌）',
+                  '宣教预防VTE相关知识', '氯化钠注射液 0.9%:100mlX1']
 
     # 如果df的drname列包含ignoreList中的元素，则删除该行
     df = df[~df['drname'].isin(ignoreList)]
@@ -272,7 +274,7 @@ def get_order(mrn, series, idList, query):
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/9454931/10/emr").json()
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/9718076/2/emr").json()
 def surgicalRecord(hDocuList):
-     
+
     if isinstance(hDocuList, dict):
         return "No match found"
 
@@ -313,10 +315,10 @@ def surgicalRecord(hDocuList):
 # 会诊
 
 def consultation(hDocuList):
-    
+
     if isinstance(hDocuList, dict):
         return "No match found"
-    
+
     # 筛选出hDocuList里docname为“麻醉前访视单”的字典
     hconsultation = [item for item in hDocuList if item['docname'] == "会诊结果"]
 
@@ -378,15 +380,15 @@ def highcharts(mrn, series):
     # 获取字符串“:36.8℃”中的“36.8”，并转换为数字格式保存至temp列
     df = pd.DataFrame(response)
     # 将 pointInTimel 列的时间转换为时间戳（以毫秒为单位）
-    df['pointInTimel_utc'] = pd.to_datetime(df['pointInTimel']).dt.tz_localize('UTC').astype('int64') // 10**6
+    df['pointInTimel_utc'] = pd.to_datetime(
+        df['pointInTimel']).dt.tz_localize('UTC').astype('int64') // 10**6
 
-    
     # 创建 temp_df 的副本
     temp_df = df[df['content'].str.contains("体温", na=False)].copy()
 
     # 如果 temp_df 为空，则返回空值
     if temp_df.empty:
-        return "No match found" 
+        return "No match found"
 
     # 使用正则表达式获取字符串中的数字部分, 并保存到temp列
     temp_df.loc[:, 'temp'] = temp_df['content'].str.extract(r'(\d+\.?\d+)')
@@ -400,18 +402,19 @@ def highcharts(mrn, series):
     temp_data = temp_df[['pointInTimel_utc', 'temp']].values.tolist()
 
     temp_data_str = ', '.join(str(pair) for pair in temp_data)
-   
+
     # 血糖
- 
+
     # 创建 temp_df 的副本
     glucose_df = df[df['content'].str.contains("血糖", na=False)].copy()
-       
+
     # 如果 temp_df 为空，则返回空值
     if glucose_df.empty:
-        return "No match found" 
+        return "No match found"
 
     # 使用正则表达式获取字符串中的数字部分, 并保存到glucose列
-    glucose_df.loc[:, 'glucose'] = glucose_df['content'].str.extract(r'(\d+\.?\d+)')
+    glucose_df.loc[:, 'glucose'] = glucose_df['content'].str.extract(
+        r'(\d+\.?\d+)')
 
     # 将glucose列中的字符串转换为数字格式
     glucose_df.loc[:, 'glucose'] = pd.to_numeric(glucose_df['glucose'])
@@ -507,7 +510,7 @@ def highcharts(mrn, series):
 
     # 筛选df中content包含 “负压管”的行保存至draingage_df
     draingage_df = df[df['content'].str.contains('负压管', na=False)].copy()
-      
+
     # 如果 draingage_df 为空，则返回空值
     if draingage_df.empty:
         return temp_glucose_chart
@@ -515,13 +518,15 @@ def highcharts(mrn, series):
     print(draingage_df['content'])
 
     # 分割 draingage_df 的content列，以":"为标志，前面的保存至 tubeTag，后面部分去除“ml”字符后保存至volume列
-    draingage_df[['tubeTag','volume']] = draingage_df['content'].str.split(':',expand=True)
+    draingage_df[['tubeTag', 'volume']
+                 ] = draingage_df['content'].str.split(':', expand=True)
 
     # 提取 volume 列中的数字
-    draingage_df.loc[:, 'volume'] = draingage_df['volume'].str.replace("ml", "").str.strip()
+    draingage_df.loc[:, 'volume'] = draingage_df['volume'].str.replace(
+        "ml", "").str.strip()
 
     # volume列转换为数值
-    draingage_df.loc[:,'volume'] = pd.to_numeric(draingage_df['volume'])
+    draingage_df.loc[:, 'volume'] = pd.to_numeric(draingage_df['volume'])
 
     # print(draingage_df[['pointInTimel','content','tubeTag','volume']])
 
@@ -534,7 +539,8 @@ def highcharts(mrn, series):
     # 对每个组，将 pointInTimel_utc 和 volume 列配对保存到列表中
     # 然后将每个组的名称和数据保存到字典中
     # 最后将所有的字典保存到列表中
-    draingage_data = [{'name': name, 'data': group[['pointInTimel_utc', 'volume']].values.tolist()} for name, group in groups]
+    draingage_data = [{'name': name, 'data': group[[
+        'pointInTimel_utc', 'volume']].values.tolist()} for name, group in groups]
 
     draingage_data_str = ', '.join(str(pair) for pair in draingage_data)
 
@@ -590,19 +596,19 @@ def highcharts(mrn, series):
 def surgical_arrange_check(pList):
 
     # 获取今天的日期
-    today = datetime.date.today() 
+    today = datetime.date.today()
 
     # 获取今天是星期几（0=星期一，6=星期日）
     weekday = today.weekday()
 
-    if weekday == 3:  
+    if weekday == 3:
         fromDay = today  # 这周四
         toDay = today + rd.relativedelta(weekday=rd.FR)  # 周五
     elif weekday == 4:  # 如果今天是上周六到这周三的其中一天
         fromDay = today + rd.relativedelta(weekday=rd.TH(-1))  # 周四
-        toDay = today # 这周三
+        toDay = today  # 这周三
     elif weekday == 5:
-        fromDay = today  
+        fromDay = today
         toDay = today + rd.relativedelta(weekday=rd.WE)
     else:
         fromDay = today + rd.relativedelta(weekday=rd.SA(-1))
@@ -625,9 +631,10 @@ def surgical_arrange_check(pList):
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
     bookListdf = pd.DataFrame(unRegister+notYetAdmintted+alreadyAdmintted)
 
-    bookList = bookListdf[['drremark','PatientSex','PatientName','PatientID','NoticeFlag','AppointmentIn','AppOperativeDate','Doctor','Diagnose','Isroom','PatientAge']].copy()
+    bookList = bookListdf[['PatientName', 'drremark', 'PatientID', 'NoticeFlag',
+                           'AppointmentIn', 'AppOperativeDate', 'Doctor', 'Diagnose', 'Isroom', 'PatientAge']].copy()
     # bookList 的PatientID列名改为mrn
-    bookList.rename(columns={'PatientID':'mrn'}, inplace = True)
+    bookList.rename(columns={'PatientID': 'mrn'}, inplace=True)
     # 删除bookList的 NoticeFlag为“取消”的行
     bookList = bookList[bookList['NoticeFlag'] != '取消']
     # 将 'mrn' 列转换为字符串类型
@@ -635,28 +642,31 @@ def surgical_arrange_check(pList):
 
     # 删除pList里mrn列与booklist中的mrn列相同的行
     pListLeft = pList[~pList['mrn'].isin(bookList['mrn'])]
-    
-    surgicalListRaw= requests.get(
+
+    surgicalListRaw = requests.get(
         f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/5/A002/{toDay_str}"
     ).json()
 
     surgicalList = pd.DataFrame(surgicalListRaw)
 
     if not surgicalList.empty:
-        surgicalList = surgicalList[['mrn','pname','room','cdo','operp','name']]
+        surgicalList = surgicalList[[
+            'mrn', 'pname', 'room', 'cdo', 'operp', 'name']]
         surgicalList = surgicalList[surgicalList['name'] == '李文雅']
         surgicalList.loc[:, 'mrn'] = surgicalList['mrn'].astype(str)
 
         #  根据bookList 和 surgicalList的 mrn 列合并，要求保留booklist的所有行
         surgicalCheck = pd.merge(bookList, surgicalList, on='mrn', how='left')
 
-        surgicalCheck = surgicalCheck[['mrn','PatientName','PatientSex','PatientAge','Isroom','Diagnose','drremark','Doctor','pname','room','cdo','operp']]
+        surgicalCheck = surgicalCheck[['PatientName', 'mrn', 'PatientSex', 'PatientAge',
+                                       'Isroom', 'Diagnose', 'drremark', 'Doctor', 'room', 'cdo', 'operp']]
 
-        inpatientCheck = pd.merge(pListLeft, surgicalList, on='mrn', how='left')[['bedid','pname','mrn','diag','room','cdo','operp']]
+        inpatientCheck = pd.merge(pListLeft, surgicalList, on='mrn', how='left')[
+            ['bedid', 'pname', 'mrn', 'diag', 'room', 'cdo', 'operp']]
 
     else:
-        surgicalCheck = bookList
-        inpatientCheck = pListLeft[['bedid','pname','mrn','diag']]
-
+        surgicalCheck = bookList[['PatientName', 'mrn', 'PatientSex',
+                                  'PatientAge', 'Isroom', 'Diagnose', 'drremark', 'Doctor']]
+        inpatientCheck = pListLeft[['bedid', 'pname', 'mrn', 'diag']]
 
     return surgicalCheck, inpatientCheck
