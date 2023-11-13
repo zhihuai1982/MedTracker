@@ -360,7 +360,7 @@ def consultation(hDocuList):
 # 体温
 
 
-def temp_glucose_chart(mrn, series):
+def highcharts(mrn, series):
 
     tempUrl = f"http://20.21.1.224:5537/api/api/Physiorcd/GetPhysiorcdNsRef/{mrn}/{series}"
 
@@ -377,13 +377,13 @@ def temp_glucose_chart(mrn, series):
     # 将 pointInTimel 列的时间转换为时间戳（以毫秒为单位）
     df['pointInTimel_utc'] = pd.to_datetime(df['pointInTimel']).dt.tz_localize('UTC').astype('int64') // 10**6
 
-    temp_df = df[df['content'].str.contains("体温", na=False)]
-    # 如果 temp_df 为空，则返回空值
-    if temp_df.empty:
-        return "No match found" 
     
     # 创建 temp_df 的副本
     temp_df = df[df['content'].str.contains("体温", na=False)].copy()
+
+    # 如果 temp_df 为空，则返回空值
+    if temp_df.empty:
+        return "No match found" 
 
     # 使用正则表达式获取字符串中的数字部分, 并保存到temp列
     temp_df.loc[:, 'temp'] = temp_df['content'].str.extract(r'(\d+\.?\d+)')
@@ -391,19 +391,21 @@ def temp_glucose_chart(mrn, series):
     # 将temp列中的字符串转换为数字格式
     temp_df.loc[:, 'temp'] = pd.to_numeric(temp_df['temp'])
 
+    # 删除temp列为na值的行
+    temp_df = temp_df.dropna(subset=['temp'])
+
     temp_data = temp_df[['pointInTimel_utc', 'temp']].values.tolist()
 
     temp_data_str = ', '.join(str(pair) for pair in temp_data)
-    # %%
+   
     # 血糖
-    glucose_df = df[df['content'].str.contains("血糖", na=False)]
-        
+ 
+    # 创建 temp_df 的副本
+    glucose_df = df[df['content'].str.contains("血糖", na=False)].copy()
+       
     # 如果 temp_df 为空，则返回空值
     if glucose_df.empty:
         return "No match found" 
-
-    # 创建 temp_df 的副本
-    glucose_df = df[df['content'].str.contains("血糖", na=False)].copy()
 
     # 使用正则表达式获取字符串中的数字部分, 并保存到glucose列
     glucose_df.loc[:, 'glucose'] = glucose_df['content'].str.extract(r'(\d+\.?\d+)')
@@ -419,10 +421,13 @@ def temp_glucose_chart(mrn, series):
 
     glucose_data_str = ', '.join(str(pair) for pair in glucose_data)
 
-    temp_glucose_highcharts_js = f"""
-    <div id="container{mrn}" style="width: 600px;height:400px;"></div>
+    temp_glucose_chart = f"""
+    <div id="container{mrn}" style="width: 425px;height:285px;"></div>
     <script>
     Highcharts.chart('container{mrn}', {{
+        title: {{
+            text: '体温血糖单'
+        }},
         xAxis: {{
             type: 'datetime',
             labels: {{
@@ -433,7 +438,11 @@ def temp_glucose_chart(mrn, series):
             title: {{
                 text: '体温'
             }},
-            min: 0,
+            labels: {{
+                enabled: false
+            }},
+            min: 18,
+            max: 40,
             minorGridLineWidth: 0,
             gridLineWidth: 0,
             alternateGridColor: null,
@@ -451,7 +460,11 @@ def temp_glucose_chart(mrn, series):
             {{title: {{
                 text: '血糖'
             }},
-            min: 0,
+            labels: {{
+                enabled: false
+            }},
+            min: 5,
+            max: 18,
             minorGridLineWidth: 0,
             gridLineWidth: 0,
             alternateGridColor: null,
@@ -459,7 +472,7 @@ def temp_glucose_chart(mrn, series):
             plotBands: {{ 
                 from: 7,
                 to: 11,
-                color: 'rgba(68, 170, 213, 0.1)',
+                color: 'rgba(205, 92, 92, 0.1)',
                 label: {{
                     text: '血糖',
                     style: {{
@@ -468,7 +481,7 @@ def temp_glucose_chart(mrn, series):
                 }}
             }}
         }}],
-        colors: ['#6CF', '#39F', '#06C', '#036', '#000'],
+        colors: ['#ed551a', '#028dc7'],
         tooltip: {{
         headerFormat: '<b>{{series.name}}</b><br>',
         pointFormat: '{{point.x:%m-%d %H:%M%p }}: {{point.y:.2f}} ℃'
@@ -486,12 +499,89 @@ def temp_glucose_chart(mrn, series):
         }}
         ]
     }});
-    </script>
+    </script> \n
     """
-    return temp_glucose_highcharts_js
+
+    # 筛选df中content包含 “负压管”的行保存至draingage_df
+    draingage_df = df[df['content'].str.contains('负压管', na=False)].copy()
+      
+    # 如果 draingage_df 为空，则返回空值
+    if draingage_df.empty:
+        return temp_glucose_chart
+
+    print(draingage_df['content'])
+
+    # 分割 draingage_df 的content列，以":"为标志，前面的保存至 tubeTag，后面部分去除“ml”字符后保存至volume列
+    draingage_df[['tubeTag','volume']] = draingage_df['content'].str.split(':',expand=True)
+
+    # 提取 volume 列中的数字
+    draingage_df.loc[:, 'volume'] = draingage_df['volume'].str.replace("ml", "").str.strip()
+
+    # volume列转换为数值
+    draingage_df.loc[:,'volume'] = pd.to_numeric(draingage_df['volume'])
+
+    # print(draingage_df[['pointInTimel','content','tubeTag','volume']])
+
+    # 根据 tubeTag 列的值，构建列表，格式如下
+    # [{name: tubeTag值1，data: [tubeTag值1对应的所有的pointInTimel_utc和volume值配对列表]}, {name: tubeTag值2，data: [tubeTag值2对应的所有的pointInTimel_utc和volume值配对列表]}]
+
+    # 根据 tubeTag 列的值进行分组
+    groups = draingage_df.groupby('tubeTag')
+
+    # 对每个组，将 pointInTimel_utc 和 volume 列配对保存到列表中
+    # 然后将每个组的名称和数据保存到字典中
+    # 最后将所有的字典保存到列表中
+    draingage_data = [{'name': name, 'data': group[['pointInTimel_utc', 'volume']].values.tolist()} for name, group in groups]
+
+    draingage_data_str = ', '.join(str(pair) for pair in draingage_data)
+
+    # 替换draingage_data_str中的 'name':为 name：，'data': 为 data：
+    draingage_data_str = re.sub(r"'name':", 'name:', draingage_data_str)
+    draingage_data_str = re.sub(r"'data':", 'data:', draingage_data_str)
+
+    draingage_chart = f"""
+    <div id="draingage_container{mrn}" style="width: 600px;height:400px;"></div>
+    <script>
+    var chart = Highcharts.chart('draingage_container{mrn}', {{
+        chart: {{
+            type: 'spline'
+        }},
+        title: {{
+            text: '引流量监测'
+        }},
+        xAxis: {{
+            type: 'datetime',
+            title: {{
+                text: null
+            }}
+        }},
+        colors: ['#6CF', '#39F', '#06C', '#036', '#000'],
+        yAxis: {{
+            title: {{
+                text: 'ml'
+            }},
+            min: 0
+        }},
+        tooltip: {{
+            headerFormat: '<b>{{series.name}}</b><br>',
+            pointFormat: '{{point.x:%m-%d %H:%M%p }}: {{point.y:.2f}} ml'
+        }},
+        plotOptions: {{
+            spline: {{
+                marker: {{
+                    enabled: true
+                }}
+            }}
+        }},
+        series: [{draingage_data_str}]
+    }});
+    </script> \n
+    """
+
+    return temp_glucose_chart + draingage_chart
 
 
-
+# %%
 # 手术安排
 
 def surgical_arrange_check():

@@ -35,7 +35,7 @@ tpListRaw = requests.request(
     verify = False,
 ).json()
 
-pattern = r'^[A-Za-z0-9]+-[\u4e00-\u9fa5]+-\d+-[\u4e00-\u9fa5]*$'
+pattern = r'^[A-Za-z0-9]+-[\u4e00-\u9fa5]+-\d+-.*$'
 
 tpList = [{key: d[key] for key in ['id', 'name']}
           for d in tpListRaw if re.match(pattern, d['name'])]
@@ -68,6 +68,8 @@ pContent = ""
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>备注</h1>\n<!-- /wp:heading -->\n"
 
 for index, row in pList.iterrows():
+
+    print(row['mrn'])
     
     noteUrl = f"https://api.trello.com/1/lists/{row['id']}/cards"
 
@@ -107,6 +109,9 @@ for index, row in pList.iterrows():
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>备注</h3>\n<!-- /wp:heading -->\n"
 
     pContent += f"<!-- wp:shortcode --> [note_form idlist='{row['id']}'] <!-- /wp:shortcode -->\n"
+
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += highcharts(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
     pContent += get_lab_results(row['mrn'], duration)
