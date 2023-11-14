@@ -87,7 +87,6 @@ def get_lab_results(mrn, duration):
 
 # %%
 
-
 def get_exam_results(mrn, duration):
     # 根据住院号获取检查结果列表
     hExamList = requests.get(
@@ -129,9 +128,11 @@ def get_exam_results(mrn, duration):
     df['repdate'] = pd.to_datetime(df['repdate'])
     df['repdate'] = df['repdate'].dt.strftime('%Y%m%d')
 
+    df.rename(columns={'checkitem':'检查项目','repdate':'检查日期','repdiag':'诊断','repcontent':'检查结果'},inplace=True)
+
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
-        if pd.to_datetime(row['repdate']).date() == datetime.datetime.now().date():
+        if pd.to_datetime(row['检查日期']).date() == datetime.datetime.now().date():
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
@@ -226,7 +227,7 @@ def get_order(mrn, series, idList, query):
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
-        if row['dateleft'] < pd.Timedelta(hours=12):
+        if row['剩余时间'] < pd.Timedelta(hours=12):
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
@@ -284,7 +285,10 @@ def get_order(mrn, series, idList, query):
     # df 根据 ordertype 和 dateleft 逆序排序
     df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[True, True])
 
-    return df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft']].style.hide().apply(highlight_today, axis=1).to_html()
+    df = df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft']]
+    df.rename(columns={'drname':'医嘱名称','ordertype':'医嘱类型','dosage':'剂量','frequency':'频次','dateleft':'剩余时间'},inplace=True)
+
+    return df.style.hide().apply(highlight_today, axis=1).to_html()
 
 
 # %%
@@ -373,7 +377,7 @@ def consultation(hDocuList):
     consultationRes = consultationRes.sort_values(by='会诊时间', ascending=False)
 
     def highlight_today(row):
-        if (datetime.datetime.now().date() - pd.to_datetime(row['会诊时间']).date()).days <= 2:
+        if (datetime.datetime.now().date() - pd.to_datetime(row['会诊时间']).date()).days <= 1:
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
@@ -447,7 +451,7 @@ def highcharts(mrn, series):
     glucose_data_str = ', '.join(str(pair) for pair in glucose_data)
 
     temp_glucose_chart = f"""
-    <div id="container{mrn}" style="width: 425px;height:285px;"></div>
+    <div id="container{mrn}" style="width: 600px;height:400px;"></div>
     <script>
     Highcharts.chart('container{mrn}', {{
         title: {{
