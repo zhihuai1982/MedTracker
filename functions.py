@@ -56,12 +56,15 @@ def get_lab_results(mrn, duration):
     # 比如将 “ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查”替换为“生化全套”
     checkitemDict = {
         "ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查": "生化全套",
-        "CBC,ABO输血,RH输血":"血常规",
-        "HCVAb,HIVAb,梅毒筛选,AHBCIgM,前S抗原,乙肝定量":"术前免疫"}
+        "CBC,ABO输血,RH输血": "血常规",
+        "HCVAb,HIVAb,梅毒筛选,AHBCIgM,前S抗原,乙肝定量": "术前免疫",
+        "HBsAg快,HCVAb快,HIVAgAb,梅毒快,TRUST,梅毒TPPA": "日间免疫",
+        "ABScreen,Rh表型CcEe": "血型"}
     # 利用字典替换checkitem列的内容
     df['checkitem'] = df['checkitem'].replace(checkitemDict)
 
-    df.rename(columns={'xmmc':'项目名称','jg':'结果','zdbz':'参考','ckqj':'参考范围','dodate':'检验日期','checkitem':'检验项目'},inplace=True)
+    df.rename(columns={'xmmc': '项目名称', 'jg': '结果', 'zdbz': 'R',
+              'ckqj': '参考范围', 'dodate': '检验日期', 'checkitem': '检验项目'}, inplace=True)
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
@@ -80,12 +83,28 @@ def get_lab_results(mrn, duration):
         else:
             return ['']*len(val)
 
-    return df.style.hide().apply(highlight_important_tests, axis=1).apply(highlight_today, axis=1).to_html()
+    labStyles = [
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '80px')]},
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '40px')]},
+        {'selector': 'th.col_heading.level0.col3',
+            'props': [('width', '150px')]},
+        {'selector': 'th.col_heading.level0.col4',
+            'props': [('width', '120px')]},
+        {'selector': 'th.col_heading.level0.col5',
+            'props': [('width', '110px')]}
+    ]
+
+    return df.style.set_table_styles(labStyles).hide().apply(highlight_important_tests, axis=1).apply(highlight_today, axis=1).to_html()
 
 # df = get_lab_results(4878420, 30)
 # print(df)
 
 # %%
+
 
 def get_exam_results(mrn, duration):
     # 根据住院号获取检查结果列表
@@ -128,7 +147,8 @@ def get_exam_results(mrn, duration):
     df['repdate'] = pd.to_datetime(df['repdate'])
     df['repdate'] = df['repdate'].dt.strftime('%Y%m%d')
 
-    df.rename(columns={'checkitem':'检查项目','repdate':'检查日期','repdiag':'诊断','repcontent':'检查结果'},inplace=True)
+    df.rename(columns={'checkitem': '检查项目', 'repdate': '检查日期',
+              'repdiag': '诊断', 'repcontent': '检查结果'}, inplace=True)
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
@@ -137,15 +157,19 @@ def get_exam_results(mrn, duration):
         else:
             return ['']*len(row)
 
-        # 使用 Styler 类的 set_table_styles 方法设置列宽
+    # 使用 Styler 类的 set_table_styles 方法设置列宽
     examStyles = [
-        {'selector': 'th.col_heading.level0.col0', 'props': [('width', '100px')]},
-        {'selector': 'th.col_heading.level0.col1', 'props': [('width', '100px')]},
-        {'selector': 'th.col_heading.level0.col2', 'props': [('width', '100px')]},
-        {'selector': 'th.col_heading.level0.col3', 'props': [('width', '300px')]}
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col3',
+            'props': [('width', '300px')]}
     ]
 
-    return df.style.hide().apply(highlight_today, axis=1).set_table_styles(examStyles).to_html(classes="dataframe",table_id = "testtable")
+    return df.style.hide().apply(highlight_today, axis=1).set_table_styles(examStyles).to_html(classes="dataframe", table_id="testtable")
 
 
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/4310592/11/emr").json()
@@ -177,7 +201,7 @@ def get_preAnesth(hDocuList):
     # 筛选df第二列中包含“Yes”的行，获取第一列和最后2列
     df = df[df[2].str.contains("Yes", na=False)].iloc[:, [0, 3, 4]]
 
-    return df.to_html()
+    return df.to_html(index=False, header=False)
 
 # %%
 # 护理记录
@@ -225,13 +249,6 @@ def get_order(mrn, series, idList, query):
     # 计算剩余时间
     df['dateleft'] = df['datestop'] - pd.Timestamp.now()
 
-    # 定义一个函数，该函数会检查一个日期是否是今天的日期
-    def highlight_today(row):
-        if row['剩余时间'] < pd.Timedelta(hours=12):
-            return ['background-color: yellow']*len(row)
-        else:
-            return ['']*len(row)
-
     # 抗生素列表
     antibioticList = ['[集采]头孢他啶针 1gX1', '哌拉西林']
 
@@ -258,7 +275,7 @@ def get_order(mrn, series, idList, query):
             )
 
     # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 小于 12 小时，则打印“抗生素即将停止使用，请注意！”
-    if not df[df['drname'].isin(antibioticList) & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
+    if not df[df['drname'].isin(antibioticList) & (df['ordertype']=="R") & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
         # print("抗生素即将停止使用，请注意！")
         response = requests.request(
             "GET",
@@ -285,10 +302,36 @@ def get_order(mrn, series, idList, query):
     # df 根据 ordertype 和 dateleft 逆序排序
     df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[True, True])
 
-    df = df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft']]
-    df.rename(columns={'drname':'医嘱名称','ordertype':'医嘱类型','dosage':'剂量','frequency':'频次','dateleft':'剩余时间'},inplace=True)
+    # dateleft列的显示格式改为  1days 5hours
+    df['dateleft_dh'] = df['dateleft'].apply(lambda x: f"{x.days}d {x.seconds // 3600}h")
 
-    return df.style.hide().apply(highlight_today, axis=1).to_html()
+    df = df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft', 'dateleft_dh']]
+    df.rename(columns={'drname': '医嘱名称', 'ordertype': 'T',
+              'dosage': '剂量', 'frequency': '频次', 'dateleft_dh': '剩余时间'}, inplace=True)
+
+    # 使用 Styler 类的 set_table_styles 方法设置列宽
+    
+    orderStyles = [
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '300px')]},
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '50px')]},
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '80px')]},
+        {'selector': 'th.col_heading.level0.col3',
+            'props': [('width', '80px')]},
+        {'selector': 'th.col_heading.level0.col4',
+            'props': [('width', '100px')]},
+    ]
+
+    # 定义一个函数，该函数会检查一个日期是否是今天的日期
+    def highlight_today(row):
+        if row['dateleft'] < pd.Timedelta(hours=12):
+            return ['background-color: yellow']*len(row)
+        else:
+            return ['']*len(row)
+
+    return df.style.hide(subset='dateleft',axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
 
 
 # %%
@@ -331,7 +374,7 @@ def surgicalRecord(hDocuList):
         dfs.append(df)
 
     result_df = pd.concat(dfs, ignore_index=True)
-    return result_df.to_html()
+    return result_df.to_html(index=False)
 
 
 # %%
@@ -382,7 +425,19 @@ def consultation(hDocuList):
         else:
             return ['']*len(row)
 
-    return consultationRes.style.hide().apply(highlight_today, axis=1).to_html()
+    # 使用 Styler 类的 set_table_styles 方法设置列宽
+    consultationStyles = [
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '50px')]},
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '50px')]},
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col3',
+            'props': [('width', '400px')]}
+    ]
+
+    return consultationRes.style.hide().set_table_styles(consultationStyles).apply(highlight_today, axis=1).to_html()
 
 # %%
 # 体温
@@ -682,13 +737,15 @@ def surgical_arrange_check(pList):
         #  根据bookList 和 surgicalList的 mrn 列合并，要求保留booklist的所有行
         surgicalCheck = pd.merge(bookList, surgicalList, on='mrn', how='left')
 
-        surgicalCheck = surgicalCheck[['PatientName', 'mrn', 'PatientSex', 'PatientAge',
-                                       'Isroom', 'Diagnose', 'drremark', 'Doctor', 'room', 'cdo', 'operp']]
+        surgicalCheck = surgicalCheck[['room','cdo','PatientName', 'mrn', 'PatientSex', 'PatientAge',
+                                       'Isroom', 'Diagnose', 'drremark', 'operp','Doctor']]
+        # surgicalCheck 根据 room 和 cdo 升序排序
+        surgicalCheck = surgicalCheck.sort_values(by=['room', 'cdo'])
+        # 并将cdo列改成int格式
+        surgicalCheck.loc[:, 'cdo'] = surgicalCheck['cdo'].astype(str).replace('.0', '', regex=True)
 
-        # pListLeft.loc[:, 'mrn'] = pListLeft['mrn'].astype(str)
-
-        inpatientCheck = pd.merge(pListLeft, surgicalList, on=['mrn','pname'], how='left')[
-            ['bedid', 'pname', 'mrn', 'diag', 'room', 'cdo', 'operp']]
+        inpatientCheck = pd.merge(pListLeft, surgicalList, on=['mrn', 'pname'], how='left')[
+            ['room', 'cdo', 'bedid', 'pname', 'mrn', 'diag', 'operp']]
 
     else:
         surgicalCheck = bookList[['PatientName', 'mrn', 'PatientSex',

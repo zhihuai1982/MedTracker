@@ -53,6 +53,10 @@ hpListRaw = requests.get(
 hpList = [{key: d[key] for key in ['bedid', 'pname', 'mrn', 'series', 'diag', 'admdays']}
           for d in hpListRaw]
 
+# hpList 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天
+for item in hpList:
+    item['h2name'] = f"{item['bedid']}-{item['pname']}-{item['mrn']}-{item['admdays']}d-{item['diag']}"
+
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36"}
 
@@ -82,7 +86,7 @@ for index, row in pList.iterrows():
     ).json()
 
     # 根据response结果，构建html列表，文字为name列，链接为shortUrl
-    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'>{row['name']}</h4>\n<!-- /wp:heading -->\n"
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'>{row['h2name']}</h4>\n<!-- /wp:heading -->\n"
     for item in response:
         pContent += f'<li><a href="{item["shortUrl"]}" target="_blank">{item["name"]}</a></li>\n'
 
@@ -106,7 +110,7 @@ for index, row in pList.iterrows():
     hDocuList = requests.get(
         f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{row['mrn']}/{row['series']}/emr", headers=headers).json()
 
-    pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{row['name']}</h2>\n<!-- /wp:heading -->\n"
+    pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{row['h2name']}</h2>\n<!-- /wp:heading -->\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>备注</h3>\n<!-- /wp:heading -->\n"
 
@@ -142,8 +146,39 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手�
 
 surgical_arrange_df, inpatient_arrange_df = surgical_arrange_check(pList)
 
-pContent += surgical_arrange_df.to_html(index=False)
-pContent += inpatient_arrange_df.to_html(index=False)
+# 如果 surgical_arrange_df 有 11 列
+if surgical_arrange_df.shape[1] == 11:
+    surgicalStyles = [
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '40px')]},
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '40px')]},
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '80px')]},
+        {'selector': 'th.col_heading.level0.col3',
+            'props': [('width', '80px')]},
+        {'selector': 'th.col_heading.level0.col4',
+            'props': [('width', '40px')]},
+        {'selector': 'th.col_heading.level0.col5',
+            'props': [('width', '40px')]},
+        {'selector': 'th.col_heading.level0.col6',
+            'props': [('width', '60px')]},
+        {'selector': 'th.col_heading.level0.col7',
+            'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col8',
+            'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col9',
+            'props': [('width', '180px')]},
+        {'selector': 'th.col_heading.level0.col10',
+            'props': [('width', '100px')]}
+    ]
+    pContent += "<div class='table-container'> " + surgical_arrange_df.style.hide().set_table_styles(surgicalStyles).to_html() + "</div>\n"
+else:
+    pContent += "<div class='table-container'> " + surgical_arrange_df.to_html(index=False) + "</div>\n"
+
+
+pContent += "<div class='table-container'> " + inpatient_arrange_df.to_html(index=False) + "</div>\n"
+
 # %%
 
 # 筛选出rj_df里 Isroom为“日间“的列
