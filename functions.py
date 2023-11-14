@@ -52,9 +52,20 @@ def get_lab_results(mrn, duration):
     # 将dodate转换成日期格式
     df['dodate'] = pd.to_datetime(df['dodate']).dt.strftime('%Y-%m-%d')
 
+    # 创建一个字典，用于替换checkitem里的内容
+    # 比如将 “ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查”替换为“生化全套”
+    checkitemDict = {
+        "ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查": "生化全套",
+        "CBC,ABO输血,RH输血":"血常规",
+        "HCVAb,HIVAb,梅毒筛选,AHBCIgM,前S抗原,乙肝定量":"术前免疫"}
+    # 利用字典替换checkitem列的内容
+    df['checkitem'] = df['checkitem'].replace(checkitemDict)
+
+    df.rename(columns={'xmmc':'项目名称','jg':'结果','zdbz':'参考','ckqj':'参考范围','dodate':'检验日期','checkitem':'检验项目'},inplace=True)
+
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
-        if pd.to_datetime(row['dodate']).date() == datetime.datetime.now().date():
+        if pd.to_datetime(row['检验日期']).date() == datetime.datetime.now().date():
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
@@ -64,12 +75,12 @@ def get_lab_results(mrn, duration):
 
     # 定义一个函数，该函数检查一个值是否在重点检验结果名称列表中
     def highlight_important_tests(val):
-        if val['xmmc'] in important_tests:
+        if val['项目名称'] in important_tests:
             return ['color: red']*len(val)
         else:
             return ['']*len(val)
 
-    return df.style.apply(highlight_important_tests, axis=1).apply(highlight_today, axis=1).to_html()
+    return df.style.hide().apply(highlight_important_tests, axis=1).apply(highlight_today, axis=1).to_html()
 
 # df = get_lab_results(4878420, 30)
 # print(df)
@@ -125,7 +136,15 @@ def get_exam_results(mrn, duration):
         else:
             return ['']*len(row)
 
-    return df.style.apply(highlight_today, axis=1).to_html()
+        # 使用 Styler 类的 set_table_styles 方法设置列宽
+    examStyles = [
+        {'selector': 'th.col_heading.level0.col0', 'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col1', 'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col2', 'props': [('width', '100px')]},
+        {'selector': 'th.col_heading.level0.col3', 'props': [('width', '300px')]}
+    ]
+
+    return df.style.hide().apply(highlight_today, axis=1).set_table_styles(examStyles).to_html(classes="dataframe",table_id = "testtable")
 
 
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/4310592/11/emr").json()
@@ -265,7 +284,7 @@ def get_order(mrn, series, idList, query):
     # df 根据 ordertype 和 dateleft 逆序排序
     df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[True, True])
 
-    return df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft']].style.apply(highlight_today, axis=1).to_html()
+    return df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft']].style.hide().apply(highlight_today, axis=1).to_html()
 
 
 # %%
@@ -359,7 +378,7 @@ def consultation(hDocuList):
         else:
             return ['']*len(row)
 
-    return consultationRes.style.apply(highlight_today, axis=1).to_html()
+    return consultationRes.style.hide().apply(highlight_today, axis=1).to_html()
 
 # %%
 # 体温
@@ -631,7 +650,7 @@ def surgical_arrange_check(pList):
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
     bookListdf = pd.DataFrame(unRegister+notYetAdmintted+alreadyAdmintted)
 
-    bookList = bookListdf[['PatientName', 'drremark', 'PatientID', 'NoticeFlag',
+    bookList = bookListdf[['PatientName', 'drremark', 'PatientID', 'NoticeFlag', 'PatientSex',
                            'AppointmentIn', 'AppOperativeDate', 'Doctor', 'Diagnose', 'Isroom', 'PatientAge']].copy()
     # bookList 的PatientID列名改为mrn
     bookList.rename(columns={'PatientID': 'mrn'}, inplace=True)
@@ -639,6 +658,7 @@ def surgical_arrange_check(pList):
     bookList = bookList[bookList['NoticeFlag'] != '取消']
     # 将 'mrn' 列转换为字符串类型
     bookList.loc[:, 'mrn'] = bookList['mrn'].astype(str)
+    pList.loc[:, 'mrn'] = pList['mrn'].astype(str)
 
     # 删除pList里mrn列与booklist中的mrn列相同的行
     pListLeft = pList[~pList['mrn'].isin(bookList['mrn'])]
@@ -661,7 +681,9 @@ def surgical_arrange_check(pList):
         surgicalCheck = surgicalCheck[['PatientName', 'mrn', 'PatientSex', 'PatientAge',
                                        'Isroom', 'Diagnose', 'drremark', 'Doctor', 'room', 'cdo', 'operp']]
 
-        inpatientCheck = pd.merge(pListLeft, surgicalList, on='mrn', how='left')[
+        # pListLeft.loc[:, 'mrn'] = pListLeft['mrn'].astype(str)
+
+        inpatientCheck = pd.merge(pListLeft, surgicalList, on=['mrn','pname'], how='left')[
             ['bedid', 'pname', 'mrn', 'diag', 'room', 'cdo', 'operp']]
 
     else:

@@ -116,7 +116,7 @@ for index, row in pList.iterrows():
     pContent += highcharts(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
-    pContent += get_lab_results(row['mrn'], duration)
+    pContent += "<div class='table_container'>" + get_lab_results(row['mrn'], duration) + "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
     pContent += get_exam_results(row['mrn'], duration)
@@ -142,8 +142,8 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手�
 
 surgical_arrange_df, inpatient_arrange_df = surgical_arrange_check(pList)
 
-pContent += surgical_arrange_df.to_html()
-pContent += inpatient_arrange_df.to_html()
+pContent += surgical_arrange_df.to_html(index=False)
+pContent += inpatient_arrange_df.to_html(index=False)
 # %%
 
 # 筛选出rj_df里 Isroom为“日间“的列
