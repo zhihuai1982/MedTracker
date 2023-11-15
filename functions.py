@@ -222,7 +222,8 @@ def get_nurse_doc(mrn, series):
     else:
         content = "No match found"
 
-    return content
+    return f"<!-- wp:paragraph -->\n<p class='nurse_doc'>\n{content}\n</p>\n<!-- /wp:paragraph -->"
+
 
 # %%
 # 医嘱
@@ -275,7 +276,7 @@ def get_order(mrn, series, idList, query):
             )
 
     # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 小于 12 小时，则打印“抗生素即将停止使用，请注意！”
-    if not df[df['drname'].isin(antibioticList) & (df['ordertype']=="R") & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
+    if not df[df['drname'].isin(antibioticList) & (df['ordertype'] == "R") & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
         # print("抗生素即将停止使用，请注意！")
         response = requests.request(
             "GET",
@@ -294,23 +295,25 @@ def get_order(mrn, series, idList, query):
             )
 
     ignoreList = ['饮水大于1500ML/日（如无禁忌）', '早期下床活动（如无禁忌）',
-                  '宣教预防VTE相关知识', '氯化钠注射液 0.9%:100mlX1']
+                  '宣教预防VTE相关知识', '氯化钠注射液 0.9%:100mlX1', '瑞芬太尼针 2mgX5', '[国产]舒芬太尼针 50ug:1mlX1']
 
     # 如果df的drname列包含ignoreList中的元素，则删除该行
     df = df[~df['drname'].isin(ignoreList)]
 
     # df 根据 ordertype 和 dateleft 逆序排序
-    df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[True, True])
+    df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[False, True])
 
     # dateleft列的显示格式改为  1days 5hours
-    df['dateleft_dh'] = df['dateleft'].apply(lambda x: f"{x.days}d {x.seconds // 3600}h")
+    df['dateleft_dh'] = df['dateleft'].apply(
+        lambda x: f"{x.days}d {x.seconds // 3600}h")
 
-    df = df[['drname', 'ordertype', 'dosage', 'frequency', 'dateleft', 'dateleft_dh']]
+    df = df[['drname', 'ordertype', 'dosage',
+             'frequency', 'dateleft', 'dateleft_dh']]
     df.rename(columns={'drname': '医嘱名称', 'ordertype': 'T',
               'dosage': '剂量', 'frequency': '频次', 'dateleft_dh': '剩余时间'}, inplace=True)
 
     # 使用 Styler 类的 set_table_styles 方法设置列宽
-    
+
     orderStyles = [
         {'selector': 'th.col_heading.level0.col0',
             'props': [('width', '300px')]},
@@ -326,12 +329,12 @@ def get_order(mrn, series, idList, query):
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
-        if row['dateleft'] < pd.Timedelta(hours=12):
+        if (row['dateleft'] < pd.Timedelta(hours=12)) & (row['T'] == "R"):
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset='dateleft',axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
+    return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
 
 
 # %%
@@ -374,11 +377,24 @@ def surgicalRecord(hDocuList):
         dfs.append(df)
 
     result_df = pd.concat(dfs, ignore_index=True)
-    return result_df.to_html(index=False)
 
+    # 使用 Styler 类的 set_table_styles 方法设置列宽
+    surgicalStyles = [
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '50px')]},
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '150px')]},
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '150px')]},
+        {'selector': 'th.col_heading.level0.col3',
+            'props': [('width', '250px')]}
+    ]
+
+    return result_df.style.set_table_styles(surgicalStyles).hide().to_html()
 
 # %%
 # 会诊
+
 
 def consultation(hDocuList):
 
@@ -679,23 +695,56 @@ def surgical_arrange_check(pList):
     # 获取今天是星期几（0=星期一，6=星期日）
     weekday = today.weekday()
 
-    if weekday == 3:
+    if weekday == 3:  # 周四
         fromDay = today  # 这周四
         toDay = today + rd.relativedelta(weekday=rd.FR)  # 周五
-    elif weekday == 4:  # 如果今天是上周六到这周三的其中一天
+    elif weekday == 4:  # 周五
         fromDay = today + rd.relativedelta(weekday=rd.TH(-1))  # 周四
-        toDay = today  # 这周三
-    elif weekday == 5:
+        toDay = today  # 这周五
+    elif weekday == 5:  # 周六
         fromDay = today
         toDay = today + rd.relativedelta(weekday=rd.WE)
     else:
         fromDay = today + rd.relativedelta(weekday=rd.SA(-1))
         toDay = today + rd.relativedelta(weekday=rd.WE)
 
+    if weekday == 2 or weekday == 3:
+        nextFromDay = today + rd.relativedelta(weekday=rd.TH)
+        nextToDay = today + rd.relativedelta(weekday=rd.FR)
+    elif weekday == 0 or weekday == 1:
+        nextFromDay = today + rd.relativedelta(weekday=rd.SA(-1))
+        nextToDay = today + rd.relativedelta(weekday=rd.WE)
+    else:
+        arrangeListdf = []
+
     # 将日期格式化为字符串
     fromDay_str = fromDay.strftime('%Y-%m-%d')
     toDay_str = toDay.strftime('%Y-%m-%d')
+    nextFromDay_str = nextFromDay.strftime('%Y-%m-%d')
+    nextToDay_str = nextToDay.strftime('%Y-%m-%d')
 
+    # arrange surgery
+    arrange_unRegister = requests.get(
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/1/33A/30046/"
+    ).json()
+    arrange_notYetAdmintted = requests.get(
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/5/33A/30046/"
+    ).json()
+    arrange_alreadyAdmintted = requests.get(
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/7/33A/30046/"
+    ).json()
+
+    # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
+    arrangeListdf = pd.DataFrame(
+        arrange_unRegister+arrange_alreadyAdmintted+arrange_notYetAdmintted)
+    arrangeListdf = arrangeListdf[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
+                                   'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate']]
+    # 删除bookList的 NoticeFlag为“取消”的行
+    arrangeListdf = arrangeListdf[arrangeListdf['NoticeFlag'] != '取消']
+
+    arrangeListdf.to_excel(f"D:\working-sync\手术通知\{nextToDay_str}.xlsx", index=False)
+
+    # check surgery
     unRegister = requests.get(
         f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/1/33A/30046/"
     ).json()
@@ -737,12 +786,13 @@ def surgical_arrange_check(pList):
         #  根据bookList 和 surgicalList的 mrn 列合并，要求保留booklist的所有行
         surgicalCheck = pd.merge(bookList, surgicalList, on='mrn', how='left')
 
-        surgicalCheck = surgicalCheck[['room','cdo','PatientName', 'mrn', 'PatientSex', 'PatientAge',
-                                       'Isroom', 'Diagnose', 'drremark', 'operp','Doctor']]
+        surgicalCheck = surgicalCheck[['room', 'cdo', 'PatientName', 'mrn', 'PatientSex', 'PatientAge',
+                                       'Isroom', 'Diagnose', 'drremark', 'operp', 'Doctor']]
         # surgicalCheck 根据 room 和 cdo 升序排序
         surgicalCheck = surgicalCheck.sort_values(by=['room', 'cdo'])
         # 并将cdo列改成int格式
-        surgicalCheck.loc[:, 'cdo'] = surgicalCheck['cdo'].astype(str).replace('.0', '', regex=True)
+        surgicalCheck.loc[:, 'cdo'] = surgicalCheck['cdo'].astype(
+            str).replace('.0', '', regex=True)
 
         inpatientCheck = pd.merge(pListLeft, surgicalList, on=['mrn', 'pname'], how='left')[
             ['room', 'cdo', 'bedid', 'pname', 'mrn', 'diag', 'operp']]
@@ -752,4 +802,4 @@ def surgical_arrange_check(pList):
                                   'PatientAge', 'Isroom', 'Diagnose', 'drremark', 'Doctor']]
         inpatientCheck = pListLeft[['bedid', 'pname', 'mrn', 'diag']]
 
-    return surgicalCheck, inpatientCheck
+    return surgicalCheck, inpatientCheck, arrangeListdf

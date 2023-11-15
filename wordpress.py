@@ -144,10 +144,10 @@ for index, row in pList.iterrows():
 
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
-surgical_arrange_df, inpatient_arrange_df = surgical_arrange_check(pList)
+surgical_check_df, inpatient_check_df, surgical_arrange_df = surgical_arrange_check(pList)
 
-# 如果 surgical_arrange_df 有 11 列
-if surgical_arrange_df.shape[1] == 11:
+# 如果 surgical_check_df 有 11 列
+if surgical_check_df.shape[1] == 11:
     surgicalStyles = [
         {'selector': 'th.col_heading.level0.col0',
             'props': [('width', '40px')]},
@@ -172,17 +172,20 @@ if surgical_arrange_df.shape[1] == 11:
         {'selector': 'th.col_heading.level0.col10',
             'props': [('width', '100px')]}
     ]
-    pContent += "<div class='table-container'> " + surgical_arrange_df.style.hide().set_table_styles(surgicalStyles).to_html() + "</div>\n"
+    pContent += "<div class='table-container'> " + surgical_check_df.style.hide().set_table_styles(surgicalStyles).to_html() + "</div>\n"
 else:
-    pContent += "<div class='table-container'> " + surgical_arrange_df.to_html(index=False) + "</div>\n"
+    pContent += "<div class='table-container'> " + surgical_check_df.to_html(index=False) + "</div>\n"
 
 
-pContent += "<div class='table-container'> " + inpatient_arrange_df.to_html(index=False) + "</div>\n"
+pContent += "<div class='table-container'> " + inpatient_check_df.to_html(index=False) + "</div>\n"
+
+pContent += "<div class='table-container'> " + surgical_arrange_df.to_html(index=False) + "</div>\n"
+
 
 # %%
 
 # 筛选出rj_df里 Isroom为“日间“的列
-rj_df = surgical_arrange_df[surgical_arrange_df['Isroom'] == '日间'].copy()
+rj_df = surgical_check_df[surgical_check_df['Isroom'] == '日间'].copy()
 # 新建 pBrief 列，格式为 PatientName+mrn+Diagnose
 rj_df.loc[:, 'pBrief'] = rj_df['PatientName'].str.cat(
     rj_df[['mrn', 'Diagnose']].astype(str), sep='+')
