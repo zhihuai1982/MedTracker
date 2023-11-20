@@ -74,7 +74,7 @@ def get_lab_results(mrn, duration):
             return ['']*len(row)
 
    # 创建一个包含重点检验结果名称的列表
-    important_tests = ["红细胞计数", "甘油三脂", "白细胞计数"]
+    important_tests = ["血小板计数","白细胞计数","中性粒百分数","血红蛋白量","钾","钙","肌酐","葡萄糖",'尿素/肌酐','丙氨酸氨基转移酶','天冬氨酸氨基转移酶','白蛋白','超敏C反应蛋白','D-二聚体(D-Di)']
 
     # 定义一个函数，该函数检查一个值是否在重点检验结果名称列表中
     def highlight_important_tests(val):
@@ -424,7 +424,7 @@ def consultation(hDocuList):
             '会诊科室': tables[2].iloc[2, 2],
             '会诊医生': tables[2].iloc[2, 0].split("：")[1].strip(),
             '会诊时间': tables[4].iloc[0, 3],
-            '会诊意见': tables[3].iloc[3, 0]
+            '会诊意见': ''.join(tables[3].iloc[2:, 0]).replace("注意事项：", "")
         }
 
         df = pd.DataFrame(data, index=[0])
@@ -571,7 +571,7 @@ def highcharts(mrn, series):
             opposite: true,
             plotBands: {{ 
                 from: 7,
-                to: 11,
+                to: 10,
                 color: 'rgba(205, 92, 92, 0.1)',
                 label: {{
                     text: '血糖',
@@ -584,7 +584,7 @@ def highcharts(mrn, series):
         colors: ['#ed551a', '#028dc7'],
         tooltip: {{
         headerFormat: '<b>{{series.name}}</b><br>',
-        pointFormat: '{{point.x:%m-%d %H:%M%p }}: {{point.y:.2f}} ℃'
+        pointFormat: '{{point.x:%m-%d %H:%M%p }}: {{point.y:.2f}} mmol/L'
         }},
         series: [
             {{
@@ -711,11 +711,12 @@ def surgical_arrange_check(pList):
     if weekday == 2 or weekday == 3:
         nextFromDay = today + rd.relativedelta(weekday=rd.TH)
         nextToDay = today + rd.relativedelta(weekday=rd.FR)
-    elif weekday == 0 or weekday == 1:
+    elif weekday == 0 or weekday == 1 or weekday == 6:
         nextFromDay = today + rd.relativedelta(weekday=rd.SA(-1))
         nextToDay = today + rd.relativedelta(weekday=rd.WE)
-    else:
-        arrangeListdf = []
+    elif weekday == 4 or weekday == 5:
+        nextFromDay = today + rd.relativedelta(weekday=rd.SA)
+        nextToDay = today + rd.relativedelta(weekday=rd.WE)
 
     # 将日期格式化为字符串
     fromDay_str = fromDay.strftime('%Y-%m-%d')

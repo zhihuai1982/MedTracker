@@ -90,6 +90,17 @@ for index, row in pList.iterrows():
     for item in response:
         pContent += f'<li><a href="{item["shortUrl"]}" target="_blank">{item["name"]}</a></li>\n'
 
+pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
+response = requests.request(
+    "GET",
+    "https://api.trello.com/1/lists/652d2b723905b02bdb2256fe/cards",
+    headers=headers,
+    params=query
+).json()
+for item in response:
+    pContent += f'<li><a href="{item["shortUrl"]}" target="_blank">{item["name"]}</a></li>\n'
+pContent += f"<!-- wp:shortcode --> [note_form idlist='652d2b723905b02bdb2256fe'] <!-- /wp:shortcode -->\n"
+
 # %% 遍历plist, 获取患者信息
 
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>每日更新</h1>\n<!-- /wp:heading -->\n"
@@ -186,21 +197,27 @@ pContent += "<div class='table-container'> " + surgical_arrange_df.to_html(index
 
 # 筛选出rj_df里 Isroom为“日间“的列
 rj_df = surgical_check_df[surgical_check_df['Isroom'] == '日间'].copy()
-# 新建 pBrief 列，格式为 PatientName+mrn+Diagnose
-rj_df.loc[:, 'pBrief'] = rj_df['PatientName'].str.cat(
-    rj_df[['mrn', 'Diagnose']].astype(str), sep='+')
 
-pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>日间手术</h1>\n<!-- /wp:heading -->\n"
+# rj_df 删除mrn列与pList的mrn相同的行 
+rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
 
-for index, row in rj_df.iterrows():
+# 如果rj_df不为空
+if not rj_df.empty:
+    # 新建 pBrief 列，格式为 PatientName+mrn+Diagnose
+    rj_df.loc[:, 'pBrief'] = rj_df['PatientName'].str.cat(
+        rj_df[['mrn', 'Diagnose']].astype(str), sep='+')
 
-    pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{row['pBrief']}</h2>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>日间手术</h1>\n<!-- /wp:heading -->\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
-    pContent += get_lab_results(row['mrn'], 30)
+    for index, row in rj_df.iterrows():
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
-    pContent += get_exam_results(row['mrn'], 30)
+        pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{row['pBrief']}</h2>\n<!-- /wp:heading -->\n"
+
+        pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
+        pContent += get_lab_results(row['mrn'], 30)
+
+        pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
+        pContent += get_exam_results(row['mrn'], 30)
 
 # %%
 # https://robingeuens.com/blog/python-wordpress-api/
