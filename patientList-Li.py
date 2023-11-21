@@ -27,7 +27,9 @@ for item in hpList:
 # %%
 # 获取trello列表
 
-url = "https://api.trello.com/1/boards/65296c002df7c2c909517c4e/lists"
+tBoardId = "65296c002df7c2c909517c4e"
+
+url = f"https://api.trello.com/1/boards/{tBoardId}/lists"
 
 headers = {
     "Accept": "application/json"
@@ -64,14 +66,12 @@ for item in tpList:
 # 换句话说，这个条件语句用于检查`hpList`中是否存在一个与当前`item`元素具有相同`mrn`属性的元素。如果不存在，则执行下面的代码块，否则不执行。
 
 # %% 
-id = "65296c002df7c2c909517c4e"
-
 
 for item in hpList:
     if not any(d['mrn'] == item['mrn'] for d in tpList):
         requests.request(
             "POST",
-            f"https://api.trello.com/1/boards/{id}/lists",
+            f"https://api.trello.com/1/boards/{tBoardId}/lists",
             headers=headers,
             params=dict({"name":item['pinfo']},**query),
             verify = False,

@@ -609,7 +609,7 @@ def highcharts(mrn, series):
     if draingage_df.empty:
         return temp_glucose_chart
 
-    print(draingage_df['content'])
+    # print(draingage_df['content'])
 
     # 分割 draingage_df 的content列，以":"为标志，前面的保存至 tubeTag，后面部分去除“ml”字符后保存至volume列
     draingage_df[['tubeTag', 'volume']
