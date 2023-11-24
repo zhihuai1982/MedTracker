@@ -74,7 +74,8 @@ def get_lab_results(mrn, duration):
             return ['']*len(row)
 
    # 创建一个包含重点检验结果名称的列表
-    important_tests = ["血小板计数","白细胞计数","中性粒百分数","血红蛋白量","钾","钙","肌酐","葡萄糖",'尿素/肌酐','丙氨酸氨基转移酶','天冬氨酸氨基转移酶','白蛋白','超敏C反应蛋白','D-二聚体(D-Di)']
+    important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐",
+                       "葡萄糖", '尿素/肌酐', '丙氨酸氨基转移酶', '天冬氨酸氨基转移酶', '白蛋白', '超敏C反应蛋白', 'D-二聚体(D-Di)']
 
     # 定义一个函数，该函数检查一个值是否在重点检验结果名称列表中
     def highlight_important_tests(val):
@@ -738,12 +739,14 @@ def surgical_arrange_check(pList):
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
     arrangeListdf = pd.DataFrame(
         arrange_unRegister+arrange_alreadyAdmintted+arrange_notYetAdmintted)
-    arrangeListdf = arrangeListdf[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
-                                   'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate']]
-    # 删除bookList的 NoticeFlag为“取消”的行
-    arrangeListdf = arrangeListdf[arrangeListdf['NoticeFlag'] != '取消']
+    if not arrangeListdf.empty:
+        arrangeListdf = arrangeListdf[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
+                                       'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate']]
+        # 删除bookList的 NoticeFlag为“取消”的行
+        arrangeListdf = arrangeListdf[arrangeListdf['NoticeFlag'] != '取消']
 
-    arrangeListdf.to_excel(f"D:\working-sync\手术通知\{nextToDay_str}.xlsx", index=False)
+        arrangeListdf.to_excel(
+            f"D:\working-sync\手术通知\{nextToDay_str}.xlsx", index=False)
 
     # check surgery
     unRegister = requests.get(
@@ -758,19 +761,23 @@ def surgical_arrange_check(pList):
 
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
     bookListdf = pd.DataFrame(unRegister+notYetAdmintted+alreadyAdmintted)
+    if not bookListdf.empty:
+        bookList = bookListdf[['PatientName', 'drremark', 'PatientID', 'NoticeFlag', 'PatientSex',
+                               'AppointmentIn', 'AppOperativeDate', 'Doctor', 'Diagnose', 'Isroom', 'PatientAge']].copy()
+        # bookList 的PatientID列名改为mrn
+        bookList.rename(columns={'PatientID': 'mrn'}, inplace=True)
+        # 删除bookList的 NoticeFlag为“取消”的行
+        bookList = bookList[bookList['NoticeFlag'] != '取消']
+        # 将 'mrn' 列转换为字符串类型
+        bookList.loc[:, 'mrn'] = bookList['mrn'].astype(str)
+        pList.loc[:, 'mrn'] = pList['mrn'].astype(str)
 
-    bookList = bookListdf[['PatientName', 'drremark', 'PatientID', 'NoticeFlag', 'PatientSex',
-                           'AppointmentIn', 'AppOperativeDate', 'Doctor', 'Diagnose', 'Isroom', 'PatientAge']].copy()
-    # bookList 的PatientID列名改为mrn
-    bookList.rename(columns={'PatientID': 'mrn'}, inplace=True)
-    # 删除bookList的 NoticeFlag为“取消”的行
-    bookList = bookList[bookList['NoticeFlag'] != '取消']
-    # 将 'mrn' 列转换为字符串类型
-    bookList.loc[:, 'mrn'] = bookList['mrn'].astype(str)
-    pList.loc[:, 'mrn'] = pList['mrn'].astype(str)
-
-    # 删除pList里mrn列与booklist中的mrn列相同的行
-    pListLeft = pList[~pList['mrn'].isin(bookList['mrn'])]
+        # 删除pList里mrn列与booklist中的mrn列相同的行
+        pListLeft = pList[~pList['mrn'].isin(bookList['mrn'])]
+    else:
+        bookList = pd.DataFrame(columns=['PatientName', 'mrn', 'PatientSex',
+                                         'PatientAge', 'Isroom', 'Diagnose', 'drremark', 'Doctor'])
+        pListLeft = pList
 
     surgicalListRaw = requests.get(
         f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/5/A002/{toDay_str}"
