@@ -10,6 +10,12 @@ python = ">=3.11.0,<3.13.0"
 selenium = "^4.14.0"
 py-trello = "^0.19.0"
 pandas = "^2.1.1"
+html-table = "^1.0"
+jinja2 = "^3.1.2"
+bs4 = "^0.0.1"
+lxml = "^4.9.3"
+matplotlib = "^3.8.1"
+openpyxl = "^3.1.2"
 
 
 [tool.poetry.group.dev.dependencies]

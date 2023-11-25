@@ -131,7 +131,8 @@ for index, row in pList.iterrows():
     pContent += highcharts(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
-    pContent += "<div class='table_container'>" + get_lab_results(row['mrn'], duration) + "</div>\n"
+    pContent += "<div class='table_container'>" + \
+        get_lab_results(row['mrn'], duration) + "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
     pContent += get_exam_results(row['mrn'], duration)
@@ -155,7 +156,8 @@ for index, row in pList.iterrows():
 
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
-surgical_check_df, inpatient_check_df, surgical_arrange_df = surgical_arrange_check(pList)
+surgical_check_df, inpatient_check_df, surgical_arrange_df = surgical_arrange_check(
+    pList)
 
 # 如果 surgical_check_df 有 11 列
 if surgical_check_df.shape[1] == 11:
@@ -183,14 +185,19 @@ if surgical_check_df.shape[1] == 11:
         {'selector': 'th.col_heading.level0.col10',
             'props': [('width', '100px')]}
     ]
-    pContent += "<div class='table-container'> " + surgical_check_df.style.hide().set_table_styles(surgicalStyles).to_html() + "</div>\n"
+    pContent += "<div class='table-container'> " + \
+        surgical_check_df.style.hide().set_table_styles(
+            surgicalStyles).to_html() + "</div>\n"
 else:
-    pContent += "<div class='table-container'> " + surgical_check_df.to_html(index=False) + "</div>\n"
+    pContent += "<div class='table-container'> " + \
+        surgical_check_df.to_html(index=False) + "</div>\n"
 
 
-pContent += "<div class='table-container'> " + inpatient_check_df.to_html(index=False) + "</div>\n"
+pContent += "<div class='table-container'> " + \
+    inpatient_check_df.to_html(index=False) + "</div>\n"
 
-pContent += "<div class='table-container'> " + surgical_arrange_df.to_html(index=False) + "</div>\n"
+pContent += "<div class='table-container'> " + \
+    surgical_arrange_df.to_html(index=False) + "</div>\n"
 
 
 # %%
@@ -198,7 +205,7 @@ pContent += "<div class='table-container'> " + surgical_arrange_df.to_html(index
 # 筛选出rj_df里 Isroom为“日间“的列
 rj_df = surgical_check_df[surgical_check_df['Isroom'] == '日间'].copy()
 
-# rj_df 删除mrn列与pList的mrn相同的行 
+# rj_df 删除mrn列与pList的mrn相同的行
 rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
 
 # 如果rj_df不为空
@@ -218,7 +225,6 @@ if not rj_df.empty:
 
         pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
         pContent += get_exam_results(row['mrn'], 30)
-
 
 
 # %%
@@ -262,6 +268,8 @@ headers = {
 pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
     tpList), on='mrn', how='left')
 
+# 删除pList中mrn列为“9454931”的行
+pList = pList[pList['mrn'] != 9454931]
 
 # %%
 
@@ -328,7 +336,8 @@ for index, row in pList.iterrows():
     pContent += highcharts(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
-    pContent += "<div class='table_container'>" + get_lab_results(row['mrn'], duration) + "</div>\n"
+    pContent += "<div class='table_container'>" + \
+        get_lab_results(row['mrn'], duration) + "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
     pContent += get_exam_results(row['mrn'], duration)

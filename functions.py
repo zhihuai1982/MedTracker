@@ -252,7 +252,8 @@ def get_order(mrn, series, idList, query):
     df['dateleft'] = df['datestop'] - pd.Timestamp.now()
 
     # 抗生素列表
-    antibioticList = ['[集采]头孢他啶针 1gX1', '哌拉西林']
+    antibioticList = [
+        '[集采]头孢他啶针 1gX1', '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '亚胺培南西司他丁针 0.5/0.5gX1', '[西力欣]头孢呋辛针 750mgX1', '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '头孢哌酮舒巴坦针 1.5gX1']
 
     # workflow
     # 早上筛查出需要续期抗生素的列表，创建新卡片
