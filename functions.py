@@ -236,6 +236,9 @@ def get_order(mrn, series, idList, query):
 
     response = requests.get(orderUrl).json()
 
+    if not response:
+        return "No match found"
+
     # 将response转换为dataframe，并筛选出 orderflag1, drname,dosage,frequency,ordertype,datestop
     # 保留datestop大于当前时间的行
     # 保留orderflag1 不为 NSC 的行
@@ -689,7 +692,7 @@ def highcharts(mrn, series):
 # %%
 # 手术安排
 
-def surgical_arrange_check(pList):
+def surgical_arrange_check(pList,attentding, aName):
 
     # 获取今天的日期
     today = datetime.date.today()
@@ -697,28 +700,28 @@ def surgical_arrange_check(pList):
     # 获取今天是星期几（0=星期一，6=星期日）
     weekday = today.weekday()
 
-    if weekday == 3:  # 周四
-        fromDay = today  # 这周四
-        toDay = today + rd.relativedelta(weekday=rd.FR)  # 周五
-    elif weekday == 4:  # 周五
-        fromDay = today + rd.relativedelta(weekday=rd.TH(-1))  # 周四
-        toDay = today  # 这周五
-    elif weekday == 5:  # 周六
+    if weekday == 2:  
+        fromDay = today 
+        toDay = today + rd.relativedelta(weekday=rd.TH)  
+    elif weekday == 3: 
+        fromDay = today + rd.relativedelta(weekday=rd.WE(-1)) 
+        toDay = today  
+    elif weekday == 4: 
         fromDay = today
-        toDay = today + rd.relativedelta(weekday=rd.WE)
+        toDay = today + rd.relativedelta(weekday=rd.TU)
     else:
-        fromDay = today + rd.relativedelta(weekday=rd.SA(-1))
-        toDay = today + rd.relativedelta(weekday=rd.WE)
+        fromDay = today + rd.relativedelta(weekday=rd.FR(-1))
+        toDay = today + rd.relativedelta(weekday=rd.TU)
 
-    if weekday == 2 or weekday == 3:
-        nextFromDay = today + rd.relativedelta(weekday=rd.TH)
-        nextToDay = today + rd.relativedelta(weekday=rd.FR)
-    elif weekday == 0 or weekday == 1 or weekday == 6:
-        nextFromDay = today + rd.relativedelta(weekday=rd.SA(-1))
-        nextToDay = today + rd.relativedelta(weekday=rd.WE)
-    elif weekday == 4 or weekday == 5:
-        nextFromDay = today + rd.relativedelta(weekday=rd.SA)
-        nextToDay = today + rd.relativedelta(weekday=rd.WE)
+    if weekday == 1 or weekday == 2:
+        nextFromDay = today + rd.relativedelta(weekday=rd.WE)
+        nextToDay = today + rd.relativedelta(weekday=rd.TH)
+    elif weekday == 3:
+        nextFromDay = today + rd.relativedelta(weekday=rd.FR)
+        nextToDay = today + rd.relativedelta(weekday=rd.TU)
+    elif weekday == 4 or weekday == 5 or weekday == 6:
+        nextFromDay = today + rd.relativedelta(weekday=rd.FR(-1))
+        nextToDay = today + rd.relativedelta(weekday=rd.TU)
 
     # 将日期格式化为字符串
     fromDay_str = fromDay.strftime('%Y-%m-%d')
@@ -728,13 +731,13 @@ def surgical_arrange_check(pList):
 
     # arrange surgery
     arrange_unRegister = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/1/33A/30046/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/1/33/{attentding}/"
     ).json()
     arrange_notYetAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/5/33A/30046/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/5/33/{attentding}/"
     ).json()
     arrange_alreadyAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/7/33A/30046/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/7/33/{attentding}/"
     ).json()
 
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
@@ -747,17 +750,17 @@ def surgical_arrange_check(pList):
         arrangeListdf = arrangeListdf[arrangeListdf['NoticeFlag'] != '取消']
 
         arrangeListdf.to_excel(
-            f"D:\working-sync\手术通知\{nextToDay_str}.xlsx", index=False)
+            f"D:\working-sync\手术通知\{nextToDay_str}-{aName}.xlsx", index=False)
 
     # check surgery
     unRegister = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/1/33A/30046/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/1/33/{attentding}/"
     ).json()
     notYetAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/5/33A/30046/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/5/33/{attentding}/"
     ).json()
     alreadyAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/7/33A/30046/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/7/33/{attentding}/"
     ).json()
 
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
@@ -781,7 +784,7 @@ def surgical_arrange_check(pList):
         pListLeft = pList
 
     surgicalListRaw = requests.get(
-        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/5/A002/{toDay_str}"
+        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{toDay_str}"
     ).json()
 
     surgicalList = pd.DataFrame(surgicalListRaw)
@@ -789,7 +792,7 @@ def surgical_arrange_check(pList):
     if not surgicalList.empty:
         surgicalList = surgicalList[[
             'mrn', 'pname', 'room', 'cdo', 'operp', 'name']]
-        surgicalList = surgicalList[surgicalList['name'] == '李文雅']
+        surgicalList = surgicalList[surgicalList['name'] == aName]
         surgicalList.loc[:, 'mrn'] = surgicalList['mrn'].astype(str)
 
         #  根据bookList 和 surgicalList的 mrn 列合并，要求保留booklist的所有行
@@ -811,4 +814,4 @@ def surgical_arrange_check(pList):
                                   'PatientAge', 'Isroom', 'Diagnose', 'drremark', 'Doctor']]
         inpatientCheck = pListLeft[['bedid', 'pname', 'mrn', 'diag']]
 
-    return surgicalCheck, inpatientCheck, arrangeListdf
+    return surgicalCheck, inpatientCheck, arrangeListdf, fromDay_str, toDay_str, nextFromDay_str, nextToDay_str

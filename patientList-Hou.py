@@ -13,7 +13,7 @@ headers = {
 # 而在requests库中，不用json.loads方法进行反序列化
 # 而是提供了响应对象的json方法，用来对json格式的响应体进行反序列化，获得list
 hpListRaw = requests.get(
-    'http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30046/33A/A002', headers=headers).json()
+    'http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30043/33/A001', headers=headers).json()
 
 hpList = [{key: d[key] for key in ['bedid', 'pname', 'mrn', 'diag']}
           for d in hpListRaw]
@@ -27,7 +27,7 @@ for item in hpList:
 # %%
 # 获取trello列表
 
-tBoardId = "65296c002df7c2c909517c4e"
+tBoardId = "656726edf8be9744bc4009a4"
 
 url = f"https://api.trello.com/1/boards/{tBoardId}/lists"
 
