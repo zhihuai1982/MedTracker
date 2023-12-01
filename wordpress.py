@@ -71,7 +71,7 @@ pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
 
 pContent = ""
 
-pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>备注</h1>\n<!-- /wp:heading -->\n"
+pContent += "<!-- wp:heading {'level':1} -->\n<div id='hou-notes'><h1 class='wp-block-heading'>侯组备注</h1></div>\n<!-- /wp:heading -->\n"
 
 for index, row in pList.iterrows():
 
@@ -87,7 +87,7 @@ for index, row in pList.iterrows():
     ).json()
 
     # 根据response结果，构建html列表，文字为name列，链接为shortUrl
-    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name']}'>{
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
     for item in response:
         pContent += f'<li><a href="{item["shortUrl"]
@@ -128,37 +128,38 @@ for index, row in pList.iterrows():
     pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{
         row['h2name']}</h2>\n<!-- /wp:heading -->\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>备注</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
 
     pContent += f"<!-- wp:shortcode --> [note_form idlist='{
         row['id']}'] <!-- /wp:shortcode -->\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>生命体征</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>生命体征</a></h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>化验结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         get_lab_results(row['mrn'], duration) + "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>检查结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += get_exam_results(row['mrn'], duration)
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>会诊结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>会诊结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += consultation(hDocuList)
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>既往史</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>既往史</a></h3>\n<!-- /wp:heading -->\n"
 
-    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'>麻醉会诊</h4>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#hou-notes'>麻醉会诊</a></h4>\n<!-- /wp:heading -->\n"
     pContent += get_preAnesth(hDocuList)
 
-    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'>护理记录</h4>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#hou-notes'>护理记录</a></h4>\n<!-- /wp:heading -->\n"
     pContent += get_nurse_doc(row['mrn'], row['series'])
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>医嘱</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
     pContent += get_order(row['mrn'], row['series'], row['id'], query)
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>手术记录</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += surgicalRecord(hDocuList)
+
 
 surgical_check_df, inpatient_check_df, surgical_arrange_df, fromDay_str, toDay_str, nextFromDay_str, nextToDay_str = surgical_arrange_check(
     pList, "30043", "侯铁宁")
@@ -290,7 +291,7 @@ pList = pList[pList['mrn'] != 9454931]
 
 # pContent = ""
 
-pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>备注</h1>\n<!-- /wp:heading -->\n"
+pContent += "<!-- wp:heading {'level':1} -->\n<div id='xiao-notes'><h1 class='wp-block-heading'>肖组备注</h1></div>\n<!-- /wp:heading -->\n"
 
 for index, row in pList.iterrows():
 
@@ -306,7 +307,7 @@ for index, row in pList.iterrows():
     ).json()
 
     # 根据response结果，构建html列表，文字为name列，链接为shortUrl
-    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name']}'>{
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
     for item in response:
         pContent += f'<li><a href="{item["shortUrl"]
@@ -347,36 +348,36 @@ for index, row in pList.iterrows():
     pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{
         row['h2name']}</h2>\n<!-- /wp:heading -->\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>备注</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
 
     pContent += f"<!-- wp:shortcode --> [note_form idlist='{
         row['id']}'] <!-- /wp:shortcode -->\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>生命体征</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>生命体征</a></h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>化验结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         get_lab_results(row['mrn'], duration) + "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>检查结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += get_exam_results(row['mrn'], duration)
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>会诊结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>会诊结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += consultation(hDocuList)
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>既往史</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>既往史</a></h3>\n<!-- /wp:heading -->\n"
 
-    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'>麻醉会诊</h4>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>麻醉会诊</a></h4>\n<!-- /wp:heading -->\n"
     pContent += get_preAnesth(hDocuList)
 
-    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'>护理记录</h4>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>护理记录</a></h4>\n<!-- /wp:heading -->\n"
     pContent += get_nurse_doc(row['mrn'], row['series'])
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>医嘱</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
     pContent += get_order(row['mrn'], row['series'], row['id'], query)
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>手术记录</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += surgicalRecord(hDocuList)
 
 surgical_check_df, inpatient_check_df, surgical_arrange_df, fromDay_str, toDay_str, nextFromDay_str, nextToDay_str = surgical_arrange_check(

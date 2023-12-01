@@ -256,29 +256,11 @@ def get_order(mrn, series, idList, query):
 
     # 抗生素列表
     antibioticList = [
-        '[集采]头孢他啶针 1gX1', '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '亚胺培南西司他丁针 0.5/0.5gX1', '[西力欣]头孢呋辛针 750mgX1', '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '头孢哌酮舒巴坦针 1.5gX1']
+        '[集采]头孢他啶针 1gX1','[集采]左氧氟沙星针 0.5g:100mlX1', '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '亚胺培南西司他丁针 0.5/0.5gX1', '[西力欣]头孢呋辛针 750mgX1', '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '头孢哌酮舒巴坦针 1.5gX1']
 
     # workflow
     # 早上筛查出需要续期抗生素的列表，创建新卡片
-    # 如果在中午前续期的话（续期时间大于48h）则会自动删除抗生素续期卡片，如果在下午续期的话就不会自动删除
-
-    # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 大于 48 小时
-    # 则检查trello里是否有“抗生素停用”card，有的话就删除
-    if not df[df['drname'].isin(antibioticList) & (df['dateleft'] > pd.Timedelta(hours=48))].empty:
-        response = requests.request(
-            "GET",
-            f"https://api.trello.com/1/lists/{idList}/cards",
-            headers={"Accept": "application/json"},
-            params=query).json()
-        if any("抗生素即将停止使用，请注意！" in d['name'] for d in response):
-            cardId = [d['id']
-                      for d in response if "抗生素即将停止使用，请注意！" in d['name']]
-            requests.request(
-                "DELETE",
-                f"https://api.trello.com/1/cards/{cardId[0]}",
-                headers={"Accept": "application/json"},
-                params=query
-            )
+    # 一个负责加一个负责删除
 
     # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 小于 12 小时，则打印“抗生素即将停止使用，请注意！”
     if not df[df['drname'].isin(antibioticList) & (df['ordertype'] == "R") & (df['dateleft'] < pd.Timedelta(hours=12))].empty:
@@ -297,6 +279,24 @@ def get_order(mrn, series, idList, query):
                 params=dict({"idList": idList,
                              "name": "抗生素即将停止使用，请注意！"},
                             **query)
+            )
+
+    # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 大于 48 小时
+    # 则检查trello里是否有“抗生素停用”card，有的话就删除
+    if not df[df['drname'].isin(antibioticList) & (df['dateleft'] > pd.Timedelta(hours=24))].empty:
+        response = requests.request(
+            "GET",
+            f"https://api.trello.com/1/lists/{idList}/cards",
+            headers={"Accept": "application/json"},
+            params=query).json()
+        if any("抗生素即将停止使用，请注意！" in d['name'] for d in response):
+            cardId = [d['id']
+                      for d in response if "抗生素即将停止使用，请注意！" in d['name']]
+            requests.request(
+                "DELETE",
+                f"https://api.trello.com/1/cards/{cardId[0]}",
+                headers={"Accept": "application/json"},
+                params=query
             )
 
     ignoreList = ['饮水大于1500ML/日（如无禁忌）', '早期下床活动（如无禁忌）',
