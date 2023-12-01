@@ -87,8 +87,8 @@ for index, row in pList.iterrows():
     ).json()
 
     # 根据response结果，构建html列表，文字为name列，链接为shortUrl
-    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'>{
-        row['h2name']}</h4>\n<!-- /wp:heading -->\n"
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name']}'>{
+        row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
     for item in response:
         pContent += f'<li><a href="{item["shortUrl"]
                                     }" target="_blank">{item["name"]}</a></li>\n'
@@ -133,7 +133,7 @@ for index, row in pList.iterrows():
     pContent += f"<!-- wp:shortcode --> [note_form idlist='{
         row['id']}'] <!-- /wp:shortcode -->\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>生命体征</h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
@@ -306,8 +306,8 @@ for index, row in pList.iterrows():
     ).json()
 
     # 根据response结果，构建html列表，文字为name列，链接为shortUrl
-    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'>{
-        row['h2name']}</h4>\n<!-- /wp:heading -->\n"
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name']}'>{
+        row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
     for item in response:
         pContent += f'<li><a href="{item["shortUrl"]
                                     }" target="_blank">{item["name"]}</a></li>\n'
@@ -352,7 +352,7 @@ for index, row in pList.iterrows():
     pContent += f"<!-- wp:shortcode --> [note_form idlist='{
         row['id']}'] <!-- /wp:shortcode -->\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>生命体征</h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
