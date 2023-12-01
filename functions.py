@@ -6,6 +6,99 @@ import dateutil.relativedelta as rd
 import datetime
 
 
+"""
+wordpress css snippet
+
+table {
+    width: 600px;
+    table-layout: fixed;
+}
+
+table td {
+    word-wrap: break-word;
+}
+
+.table-container table {
+	width: 1500px;
+	table-layout: auto;
+}
+
+.table-container {
+    width: 600px;
+    overflow-x: auto;
+}
+
+.nurse_doc {
+	width: 600px;
+}
+
+.note_link {
+	color: black;
+}
+
+h2 {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 100000;
+	width: 600px;
+	white-space: nowrap;
+    overflow-x: auto;
+
+}
+
+h4 {
+	width: 600px;
+}
+
+form {
+	width: 600px;
+}
+"""
+
+
+"""
+trello 递交表单  php snippet
+
+function note_form($atts = [], $content = null) {
+    // 获取短代码的属性
+    $atts = shortcode_atts(['idlist' => ''], $atts, 'note_form');
+
+    // 返回要插入的表单
+    return "
+        <form class='note-form' action='" . esc_url(admin_url('admin-post.php')) . "' method='POST'>
+            <input type='hidden' name='action' value='submit_note_form'>
+            <input type='hidden' name='idList' value='{$atts['idlist']}'>
+            <label for='note'>Note:</label><br>
+            <textarea id='note' name='note' rows='4' cols='50'></textarea><br>
+            <input type='submit' value='Submit'>
+        </form>
+    ";
+}
+add_shortcode('note_form', 'note_form');
+
+function handle_note_form_submission() {
+    $idList = $_POST['idList'];
+    $note = $_POST['note'];
+
+    $response = wp_remote_post('https://api.trello.com/1/cards', [
+        'body' => [
+            'key' => 'f45b896485c79fe922e7f022a8bc6f71',
+            'token' => 'ATTAae59e22e7d144839c54a444aa4f24d4f3ede09405b11ace472e773a78a23b0e8F2D629A2',
+            'idList' => $idList,
+            'name' => $note
+        ]
+    ]);
+
+    // 重定向回原始页面
+    wp_redirect($_SERVER['HTTP_REFERER']);
+    exit;
+}
+add_action('admin_post_nopriv_submit_note_form', 'handle_note_form_submission');
+add_action('admin_post_submit_note_form', 'handle_note_form_submission');
+"""
+
+
 # %%
 # 根据住院号获得检查列表
 def get_lab_results(mrn, duration):
@@ -21,7 +114,8 @@ def get_lab_results(mrn, duration):
 
     totalLabRes = []
     for lab in hLabList:
-        url = f"http://20.21.1.224:5537/api/api/LisReport/GetLisReportDetail/{mrn}/{lab['dodate']}/{lab['specimenid']}/{lab['domany']}"
+        url = f"http://20.21.1.224:5537/api/api/LisReport/GetLisReportDetail/{
+            mrn}/{lab['dodate']}/{lab['specimenid']}/{lab['domany']}"
         labRes = requests.get(url).json()
         for item in labRes:
             item['dodate'] = lab['dodate']
@@ -132,7 +226,8 @@ def get_exam_results(mrn, duration):
     for exam in hExamList:
         if exam['fromdb'] == 'PECT':   # 这个非常坑
             exam['fromdb'] = 'PETCT'
-        url = f"http://20.21.1.224:5537/api/api/LisReport/Get{exam['fromdb']}Detail/{mrn}/{exam['repo']}"
+        url = f"http://20.21.1.224:5537/api/api/LisReport/Get{
+            exam['fromdb']}Detail/{mrn}/{exam['repo']}"
         examRes = requests.get(url).json()
         examRes = {key: examRes[key] for key in [
             'checkitem', 'repdate', 'repdiag', 'repcontent']}
@@ -187,7 +282,8 @@ def get_preAnesth(hDocuList):
         return "No match found"
 
     # 通过id和prlog_rdn获取病历文书内容
-    mzurl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{hAnesthList[0]['id']}/{hAnesthList[0]['prlog_rdn']}/"
+    mzurl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{
+        hAnesthList[0]['id']}/{hAnesthList[0]['prlog_rdn']}/"
 
     # 获取网页内容
     response = requests.get(mzurl)
@@ -210,7 +306,8 @@ def get_preAnesth(hDocuList):
 
 
 def get_nurse_doc(mrn, series):
-    nurseUrl = f"http://20.21.1.224:5537/api/api/Physiorcd/GetNurDoc/{mrn}/{series}"
+    nurseUrl = f"http://20.21.1.224:5537/api/api/Physiorcd/GetNurDoc/{
+        mrn}/{series}"
 
     response = requests.get(nurseUrl)
 
@@ -232,7 +329,8 @@ def get_nurse_doc(mrn, series):
 
 
 def get_order(mrn, series, idList, query):
-    orderUrl = f"http://20.21.1.224:5537/api/api/EmrCope/getPatientOrder/{mrn}/{series}/40/true"
+    orderUrl = f"http://20.21.1.224:5537/api/api/EmrCope/getPatientOrder/{
+        mrn}/{series}/40/true"
 
     response = requests.get(orderUrl).json()
 
@@ -256,7 +354,7 @@ def get_order(mrn, series, idList, query):
 
     # 抗生素列表
     antibioticList = [
-        '[集采]头孢他啶针 1gX1','[集采]左氧氟沙星针 0.5g:100mlX1', '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '亚胺培南西司他丁针 0.5/0.5gX1', '[西力欣]头孢呋辛针 750mgX1', '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '头孢哌酮舒巴坦针 1.5gX1']
+        '[集采]头孢他啶针 1gX1', '[集采]左氧氟沙星针 0.5g:100mlX1', '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '亚胺培南西司他丁针 0.5/0.5gX1', '[西力欣]头孢呋辛针 750mgX1', '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '头孢哌酮舒巴坦针 1.5gX1']
 
     # workflow
     # 早上筛查出需要续期抗生素的列表，创建新卡片
@@ -362,7 +460,8 @@ def surgicalRecord(hDocuList):
     dfs = []
     for record in hSurgicalRecord:
         # 通过id和prlog_rdn获取病历文书内容
-        srurl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{record['id']}/{record['prlog_rdn']}/"
+        srurl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{
+            record['id']}/{record['prlog_rdn']}/"
 
         # 获取网页内容
         response = requests.get(srurl)
@@ -416,7 +515,8 @@ def consultation(hDocuList):
     dfs = []
     for consult in hconsultation:
         # 通过id和prlog_rdn获取病历文书内容
-        consultationUrl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{consult['id']}/{consult['prlog_rdn']}/"
+        consultationUrl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{
+            consult['id']}/{consult['prlog_rdn']}/"
 
         # 获取网页内容
         response = requests.get(consultationUrl)
@@ -460,13 +560,20 @@ def consultation(hDocuList):
 
     return consultationRes.style.hide().set_table_styles(consultationStyles).apply(highlight_today, axis=1).to_html()
 
+
 # %%
 # 体温
+"""
+wordpress 用 添加 html snippet
+
+<script src="https://code.hcharts.cn/highcharts.js"></script>
+"""
 
 
 def highcharts(mrn, series):
 
-    tempUrl = f"http://20.21.1.224:5537/api/api/Physiorcd/GetPhysiorcdNsRef/{mrn}/{series}"
+    tempUrl = f"http://20.21.1.224:5537/api/api/Physiorcd/GetPhysiorcdNsRef/{
+        mrn}/{series}"
 
     response = requests.get(tempUrl).json()
 
@@ -551,7 +658,7 @@ def highcharts(mrn, series):
             minorGridLineWidth: 0,
             gridLineWidth: 0,
             alternateGridColor: null,
-            plotBands: {{ 
+            plotBands: {{
                 from:  36,
                 to: 38,
                 color: 'rgba(68, 170, 213, 0.1)',
@@ -561,7 +668,7 @@ def highcharts(mrn, series):
                         color: '#606060'
                     }}
                 }}
-            }}}}, 
+            }}}},
             {{title: {{
                 text: '血糖'
             }},
@@ -574,7 +681,7 @@ def highcharts(mrn, series):
             gridLineWidth: 0,
             alternateGridColor: null,
             opposite: true,
-            plotBands: {{ 
+            plotBands: {{
                 from: 7,
                 to: 10,
                 color: 'rgba(205, 92, 92, 0.1)',
@@ -689,10 +796,80 @@ def highcharts(mrn, series):
     return temp_glucose_chart + draingage_chart
 
 
+"""
+wordpress 用 wpcode 新建 PHP snippet
+
+function my_ajax_handler() {
+    // 获取请求参数
+    $list_id = $_POST['list_id'];
+
+    // 设置Trello API的URL和请求头
+    $url = "https://api.trello.com/1/lists/{$list_id}/cards";
+    $args = array(
+        'headers' => array(
+            'Accept' => 'application/json'
+        ),
+        'body' => array(
+            'key' => 'f45b896485c79fe922e7f022a8bc6f71',
+            'token' => 'ATTAae59e22e7d144839c54a444aa4f24d4f3ede09405b11ace472e773a78a23b0e8F2D629A2'
+        )
+    );
+
+    // 发起GET请求
+    $response = wp_remote_get($url, $args);
+
+    // 检查是否有错误
+    if (is_wp_error($response)) {
+        wp_send_json_error();
+    } else {
+        wp_send_json_success(wp_remote_retrieve_body($response));
+    }
+}
+add_action('wp_ajax_my_ajax_handler', 'my_ajax_handler');
+add_action('wp_ajax_nopriv_my_ajax_handler', 'my_ajax_handler');
+"""
+
+
+def trello_note(trelloListId):
+    trello_note_ajax = f"""
+    <script>
+    jQuery(document).ready(function ($) {{
+        $.ajax({{
+            url: '/wp-admin/admin-ajax.php',
+            type: 'POST',
+            data: {{
+                action: 'my_ajax_handler',
+                list_id: '{trelloListId}'
+            }},
+            success: function (response) {{
+                if (response.success) {{
+                    var cards = JSON.parse(response.data);
+                    cards.forEach(function (card) {{
+                        var name = card.name; // 获取每个card对象的name属性值
+                        var shortUrl = card.shortUrl;
+                        $('#trello-content-{trelloListId}').append("<li><a href='"+ shortUrl+"'>"+name+ "</a></li><br>"); // 将每个card的name属性显示在页面上
+                    }});
+                }} else {{
+                    $('#trello-content-1').append("Ajax请求失败")
+                    console.error('Ajax请求失败');
+                }}
+            }}
+        }});
+    }});
+    </script>
+
+    <div id="trello-content-{trelloListId}">
+    <!-- Trello的内容将在这里显示 -->
+    </div>
+    """
+
+    return trello_note_ajax
+
+
 # %%
 # 手术安排
 
-def surgical_arrange_check(pList,attentding, aName):
+def surgical_arrange_check(pList, attentding, aName):
 
     # 获取今天的日期
     today = datetime.date.today()
@@ -700,13 +877,13 @@ def surgical_arrange_check(pList,attentding, aName):
     # 获取今天是星期几（0=星期一，6=星期日）
     weekday = today.weekday()
 
-    if weekday == 2:  
-        fromDay = today 
-        toDay = today + rd.relativedelta(weekday=rd.TH)  
-    elif weekday == 3: 
-        fromDay = today + rd.relativedelta(weekday=rd.WE(-1)) 
-        toDay = today  
-    elif weekday == 4: 
+    if weekday == 2:
+        fromDay = today
+        toDay = today + rd.relativedelta(weekday=rd.TH)
+    elif weekday == 3:
+        fromDay = today + rd.relativedelta(weekday=rd.WE(-1))
+        toDay = today
+    elif weekday == 4:
         fromDay = today
         toDay = today + rd.relativedelta(weekday=rd.TU)
     else:
@@ -731,13 +908,16 @@ def surgical_arrange_check(pList,attentding, aName):
 
     # arrange surgery
     arrange_unRegister = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/1/33/{attentding}/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            nextFromDay_str}/{nextToDay_str}/1/33/{attentding}/"
     ).json()
     arrange_notYetAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/5/33/{attentding}/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            nextFromDay_str}/{nextToDay_str}/5/33/{attentding}/"
     ).json()
     arrange_alreadyAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{nextFromDay_str}/{nextToDay_str}/7/33/{attentding}/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            nextFromDay_str}/{nextToDay_str}/7/33/{attentding}/"
     ).json()
 
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
@@ -750,17 +930,20 @@ def surgical_arrange_check(pList,attentding, aName):
         arrangeListdf = arrangeListdf[arrangeListdf['NoticeFlag'] != '取消']
 
         arrangeListdf.to_excel(
-            f"D:\working-sync\手术通知\{nextToDay_str}-{aName}.xlsx", index=False)
+            f"D:\\working-sync\\手术通知\\{nextToDay_str}-{aName}.xlsx", index=False)
 
     # check surgery
     unRegister = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/1/33/{attentding}/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            fromDay_str}/{toDay_str}/1/33/{attentding}/"
     ).json()
     notYetAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/5/33/{attentding}/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            fromDay_str}/{toDay_str}/5/33/{attentding}/"
     ).json()
     alreadyAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{fromDay_str}/{toDay_str}/7/33/{attentding}/"
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            fromDay_str}/{toDay_str}/7/33/{attentding}/"
     ).json()
 
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
@@ -784,7 +967,8 @@ def surgical_arrange_check(pList,attentding, aName):
         pListLeft = pList
 
     surgicalListRaw = requests.get(
-        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{toDay_str}"
+        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+            toDay_str}"
     ).json()
 
     surgicalList = pd.DataFrame(surgicalListRaw)

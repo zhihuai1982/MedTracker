@@ -76,33 +76,12 @@ pContent += "<!-- wp:heading {'level':1} -->\n<div id='hou-notes'><h1 class='wp-
 for index, row in pList.iterrows():
 
     print(row['mrn'])
-
-    noteUrl = f"https://api.trello.com/1/lists/{row['id']}/cards"
-
-    response = requests.request(
-        "GET",
-        noteUrl,
-        headers=headers,
-        params=query
-    ).json()
-
-    # 根据response结果，构建html列表，文字为name列，链接为shortUrl
     pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
-    for item in response:
-        pContent += f'<li><a href="{item["shortUrl"]
-                                    }" target="_blank">{item["name"]}</a></li>\n'
+    pContent += trello_note(row['id'])
 
 pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
-response = requests.request(
-    "GET",
-    "https://api.trello.com/1/lists/65672a615c743386d9043191/cards",
-    headers=headers,
-    params=query
-).json()
-for item in response:
-    pContent += f'<li><a href="{item["shortUrl"]
-                                }" target="_blank">{item["name"]}</a></li>\n'
+pContent += trello_note("65672a615c743386d9043191")
 pContent += f"<!-- wp:shortcode --> [note_form idlist='65672a615c743386d9043191'] <!-- /wp:shortcode -->\n"
 
 # %% 遍历plist, 获取患者信息
@@ -296,33 +275,12 @@ pContent += "<!-- wp:heading {'level':1} -->\n<div id='xiao-notes'><h1 class='wp
 for index, row in pList.iterrows():
 
     print(row['mrn'])
-
-    noteUrl = f"https://api.trello.com/1/lists/{row['id']}/cards"
-
-    response = requests.request(
-        "GET",
-        noteUrl,
-        headers=headers,
-        params=query
-    ).json()
-
-    # 根据response结果，构建html列表，文字为name列，链接为shortUrl
     pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
-    for item in response:
-        pContent += f'<li><a href="{item["shortUrl"]
-                                    }" target="_blank">{item["name"]}</a></li>\n'
+    pContent += trello_note(row['id'])
 
 pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
-response = requests.request(
-    "GET",
-    "https://api.trello.com/1/lists/655c9b555dc15db6beb5da79/cards",
-    headers=headers,
-    params=query
-).json()
-for item in response:
-    pContent += f'<li><a href="{item["shortUrl"]
-                                }" target="_blank">{item["name"]}</a></li>\n'
+pContent += trello_note("655c9b555dc15db6beb5da79")
 pContent += f"<!-- wp:shortcode --> [note_form idlist='655c9b555dc15db6beb5da79'] <!-- /wp:shortcode -->\n"
 
 # %% 遍历plist, 获取患者信息
