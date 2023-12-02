@@ -66,6 +66,9 @@ headers = {
 pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
     tpList), on='mrn', how='left')
 
+# pList 根据  bedid 列逆序排列
+pList = pList.sort_values(by='bedid', ascending=False)
+
 
 # %%
 
@@ -135,6 +138,9 @@ for index, row in pList.iterrows():
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
     pContent += get_order(row['mrn'], row['series'], row['id'], query)
+
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += medicalHistory(hDocuList)
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += surgicalRecord(hDocuList)
@@ -266,6 +272,9 @@ pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
 # 删除pList中mrn列为“9454931”的行
 pList = pList[pList['mrn'] != 9454931]
 
+# pList 根据  bedid 列逆序排列
+pList = pList.sort_values(by='bedid', ascending=False)
+
 # %%
 
 # pContent = ""
@@ -334,6 +343,9 @@ for index, row in pList.iterrows():
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
     pContent += get_order(row['mrn'], row['series'], row['id'], query)
+
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += medicalHistory(hDocuList)
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += surgicalRecord(hDocuList)

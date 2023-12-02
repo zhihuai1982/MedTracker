@@ -561,6 +561,44 @@ def consultation(hDocuList):
     return consultationRes.style.hide().set_table_styles(consultationStyles).apply(highlight_today, axis=1).to_html()
 
 
+def medicalHistory(hDocuList):
+
+    if isinstance(hDocuList, dict):
+        return "No match found"
+
+    historyList = [
+        item for item in hDocuList if item['docname'] == "首次病程录（新版）"]
+
+    if not historyList:
+        return "No match found"
+
+    historyUrl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{
+        historyList[0]['id']}/{historyList[0]['prlog_rdn']}/"
+
+    # 获取网页内容
+    response = requests.get(historyUrl)
+
+    # 从HTML中读取表格数据
+    tables = pd.read_html(StringIO(response.text))
+
+    medicalHistory = tables[3].iloc[1, 0]
+
+    # 使用正则表达式分割字符串
+    parts = re.split(r'(\d+、)', medicalHistory)
+
+    # 移除第一个元素，因为它是空的
+    parts = parts[1:]
+
+    # 在每个部分之间添加回车键
+    parts = [parts[i] + '<br>' if i % 2 != 0 else parts[i]
+             for i in range(len(parts))]
+
+    # 使用空字符串合并所有部分
+    medicalHistoryRes = ''.join(parts)
+
+    return f"<!-- wp:paragraph -->\n<p class='nurse_doc'>\n{medicalHistoryRes}\n</p>\n<!-- /wp:paragraph -->"
+
+
 # %%
 # 体温
 """
