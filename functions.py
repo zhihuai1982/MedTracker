@@ -506,34 +506,63 @@ def consultation(hDocuList):
         return "No match found"
 
     # 筛选出hDocuList里docname为“麻醉前访视单”的字典
-    hconsultation = [item for item in hDocuList if item['docname'] == "会诊结果"]
+    hconsultationApply = [
+        item for item in hDocuList if item['docname'] == "会诊申请"]
 
-    # # 如果hAnesthList为空，则返回空值
-    if not hconsultation:
+    hconsultationReply = [
+        item for item in hDocuList if item['docname'] == "会诊结果"]
+
+    # 如果 hconsultationApply 和 hconsultationReply 都为空，则返回空值
+    if not hconsultationApply and not hconsultationReply:
         return "No match found"
 
     dfs = []
-    for consult in hconsultation:
-        # 通过id和prlog_rdn获取病历文书内容
-        consultationUrl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{
-            consult['id']}/{consult['prlog_rdn']}/"
 
-        # 获取网页内容
-        response = requests.get(consultationUrl)
+    if hconsultationApply:
+        for consult in hconsultationApply:
+            # 通过id和prlog_rdn获取病历文书内容
+            consultationUrl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{
+                consult['id']}/{consult['prlog_rdn']}/"
 
-        # 从HTML中读取表格数据
-        tables = pd.read_html(StringIO(response.text))
+            # 获取网页内容
+            response = requests.get(consultationUrl)
 
-        # 每个表格都是一个DataFrame，你可以通过索引来访问它们
-        data = {
-            '会诊科室': tables[2].iloc[2, 2],
-            '会诊医生': tables[2].iloc[2, 0].split("：")[1].strip(),
-            '会诊时间': tables[4].iloc[0, 3],
-            '会诊意见': ''.join(tables[3].iloc[2:, 0]).replace("注意事项：", "")
-        }
+            # 从HTML中读取表格数据
+            tables = pd.read_html(StringIO(response.text))
 
-        df = pd.DataFrame(data, index=[0])
-        dfs.append(df)
+            # 每个表格都是一个DataFrame，你可以通过索引来访问它们
+            data = {
+                '会诊科室': "A" + tables[2].iloc[2, 1],
+                '会诊医生': tables[2].iloc[1, 1],
+                '会诊时间': tables[2].iloc[1, 3],
+                '会诊意见': ''.join(tables[3].iloc[:, 0])
+            }
+
+            df = pd.DataFrame(data, index=[0])
+            dfs.append(df)
+
+    if hconsultationReply:
+        for consult in hconsultationReply:
+            # 通过id和prlog_rdn获取病历文书内容
+            consultationUrl = f"http://20.21.1.224:5537/api/api/EmrWd/GetEmrContent/{
+                consult['id']}/{consult['prlog_rdn']}/"
+
+            # 获取网页内容
+            response = requests.get(consultationUrl)
+
+            # 从HTML中读取表格数据
+            tables = pd.read_html(StringIO(response.text))
+
+            # 每个表格都是一个DataFrame，你可以通过索引来访问它们
+            data = {
+                '会诊科室': "R" + tables[2].iloc[2, 2],
+                '会诊医生': tables[2].iloc[2, 0].split("：")[1].strip(),
+                '会诊时间': tables[4].iloc[0, 3],
+                '会诊意见': ''.join(tables[3].iloc[2:, 0]).replace("注意事项：", "")
+            }
+
+            df = pd.DataFrame(data, index=[0])
+            dfs.append(df)
 
     consultationRes = pd.concat(dfs, ignore_index=True)
 
@@ -868,7 +897,7 @@ add_action('wp_ajax_nopriv_my_ajax_handler', 'my_ajax_handler');
 """
 
 
-def trello_note(trelloListId):
+def trello_note(trelloListId, place):
     trello_note_ajax = f"""
     <script>
     jQuery(document).ready(function ($) {{
@@ -885,7 +914,7 @@ def trello_note(trelloListId):
                     cards.forEach(function (card) {{
                         var name = card.name; // 获取每个card对象的name属性值
                         var shortUrl = card.shortUrl;
-                        $('#trello-content-{trelloListId}').append("<li><a href='"+ shortUrl+"'>"+name+ "</a></li><br>"); // 将每个card的name属性显示在页面上
+                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"'>"+name+ "</a></li><br>"); // 将每个card的name属性显示在页面上
                     }});
                 }} else {{
                     $('#trello-content-1').append("Ajax请求失败")
@@ -896,7 +925,7 @@ def trello_note(trelloListId):
     }});
     </script>
 
-    <div id="trello-content-{trelloListId}">
+    <div id="trello-content-{place}-{trelloListId}">
     <!-- Trello的内容将在这里显示 -->
     </div>
     """

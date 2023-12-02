@@ -81,10 +81,10 @@ for index, row in pList.iterrows():
     print(row['mrn'])
     pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
-    pContent += trello_note(row['id'])
+    pContent += trello_note(row['id'], "together")
 
 pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
-pContent += trello_note("65672a615c743386d9043191")
+pContent += trello_note("65672a615c743386d9043191", "other")
 pContent += f"<!-- wp:shortcode --> [note_form idlist='65672a615c743386d9043191'] <!-- /wp:shortcode -->\n"
 
 # %% 遍历plist, 获取患者信息
@@ -111,6 +111,9 @@ for index, row in pList.iterrows():
         row['h2name']}</h2>\n<!-- /wp:heading -->\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
+
+    pContent += "<ul style='font-size:40px;'>" + \
+        trello_note(row['id'], "scatter") + "</ul>\n"
 
     pContent += f"<!-- wp:shortcode --> [note_form idlist='{
         row['id']}'] <!-- /wp:shortcode -->\n"
@@ -286,10 +289,10 @@ for index, row in pList.iterrows():
     print(row['mrn'])
     pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
-    pContent += trello_note(row['id'])
+    pContent += trello_note(row['id'], "together")
 
 pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
-pContent += trello_note("655c9b555dc15db6beb5da79")
+pContent += trello_note("655c9b555dc15db6beb5da79", "other")
 pContent += f"<!-- wp:shortcode --> [note_form idlist='655c9b555dc15db6beb5da79'] <!-- /wp:shortcode -->\n"
 
 # %% 遍历plist, 获取患者信息
@@ -316,6 +319,9 @@ for index, row in pList.iterrows():
         row['h2name']}</h2>\n<!-- /wp:heading -->\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
+
+    pContent += "<ul style='font-size:40px;'>" + \
+        trello_note(row['id'], "scatter") + "</ul>\n"
 
     pContent += f"<!-- wp:shortcode --> [note_form idlist='{
         row['id']}'] <!-- /wp:shortcode -->\n"
