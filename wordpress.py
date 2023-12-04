@@ -74,7 +74,7 @@ pList = pList.sort_values(by='bedid', ascending=False)
 
 pContent = ""
 
-pContent += "<!-- wp:heading {'level':1} -->\n<div id='hou-notes'><h1 class='wp-block-heading'>侯组备注</h1></div>\n<!-- /wp:heading -->\n"
+pContent += "<!-- wp:heading {{'level':1} -->\n<div id='hou-notes'><h1 class='wp-block-heading'>侯组备注</h1></div>\n<!-- /wp:heading -->\n"
 
 for index, row in pList.iterrows():
 
@@ -85,11 +85,18 @@ for index, row in pList.iterrows():
 
 pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
 pContent += trello_note("65672a615c743386d9043191", "other")
-pContent += f"<!-- wp:shortcode --> [note_form idlist='65672a615c743386d9043191'] <!-- /wp:shortcode -->\n"
+pContent += f"""
+        <form class="myForm">
+        <input type="hidden" class="list_id" value="65672a615c743386d9043191">
+        <input type="text" class="name" name="name", style="width: 600px; height: 70px; margin-bottom: 10px;"><br>
+        <input type="submit" value="Submit" style="  display: block; margin-left: auto;">
+        </form>
+        <p class="message"></p>\n
+        """
 
 # %% 遍历plist, 获取患者信息
 
-pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>每日更新</h1>\n<!-- /wp:heading -->\n"
+pContent += "<!-- wp:heading {{'level':1} -->\n<h1 class='wp-block-heading'>每日更新</h1>\n<!-- /wp:heading -->\n"
 
 for index, row in pList.iterrows():
     # 获取病历文书列表
@@ -112,11 +119,17 @@ for index, row in pList.iterrows():
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
 
-    pContent += "<ul style='font-size:40px;'>" + \
+    pContent += "<ul style='font-size:40px; line-height: 1;'>" + \
         trello_note(row['id'], "scatter") + "</ul>\n"
 
-    pContent += f"<!-- wp:shortcode --> [note_form idlist='{
-        row['id']}'] <!-- /wp:shortcode -->\n"
+    pContent += f"""
+        <form class="myForm">
+        <input type="hidden" class="list_id" value="{row['id']}">
+        <input type="text" class="name" name="name", style="width: 600px; height: 70px; margin-bottom: 10px;"><br>
+        <input type="submit" value="Submit" style="  display: block; margin-left: auto;">
+        </form>
+        <p class="message"></p>\n
+        """
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>生命体征</a></h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])
@@ -293,7 +306,14 @@ for index, row in pList.iterrows():
 
 pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
 pContent += trello_note("655c9b555dc15db6beb5da79", "other")
-pContent += f"<!-- wp:shortcode --> [note_form idlist='655c9b555dc15db6beb5da79'] <!-- /wp:shortcode -->\n"
+pContent += f"""
+        <form class="myForm">
+        <input type="hidden" class="list_id" value="655c9b555dc15db6beb5da79">
+        <input type="text" class="name" name="name", style="width: 600px; height: 70px; margin-bottom: 10px;"><br>
+        <input type="submit" value="Submit" style="  display: block; margin-left: auto;">
+        </form>
+        <p class="message"></p>\n
+    """
 
 # %% 遍历plist, 获取患者信息
 
@@ -320,11 +340,17 @@ for index, row in pList.iterrows():
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
 
-    pContent += "<ul style='font-size:40px;'>" + \
+    pContent += "<ul style='font-size:40px; line-height: 1;'>" + \
         trello_note(row['id'], "scatter") + "</ul>\n"
 
-    pContent += f"<!-- wp:shortcode --> [note_form idlist='{
-        row['id']}'] <!-- /wp:shortcode -->\n"
+    pContent += f"""
+        <form class="myForm">
+        <input type="hidden" class="list_id" value="{row['id']}">
+        <input type="text" class="name" name="name", style="width: 600px; height: 70px; margin-bottom: 10px;"><br>
+        <input type="submit" value="Submit" style="  display: block; margin-left: auto;">
+        </form>
+        <p class="message"></p>\n
+    """
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>生命体征</a></h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])

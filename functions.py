@@ -56,46 +56,44 @@ form {
 }
 """
 
-
 """
-trello 递交表单  php snippet
+trello 递交表单
 
-function note_form($atts = [], $content = null) {
-    // 获取短代码的属性
-    $atts = shortcode_atts(['idlist' => ''], $atts, 'note_form');
+<script>
+// JavaScript
+$(document).ready(function(){
+  $('.myForm').on('submit', function(e){
+    e.preventDefault();
+    var form = $(this); // 保存对表单的引用
+    var list_id = form.find('.list_id').val();
+    var name = form.find('.name').val();
+    var messageElement = form.next('.message');
+    $.ajax({
+      url: 'https://api.trello.com/1/cards',
+      type: 'POST',
+      data: {
+        key: 'f45b896485c79fe922e7f022a8bc6f71',
+        token: 'ATTAae59e22e7d144839c54a444aa4f24d4f3ede09405b11ace472e773a78a23b0e8F2D629A2',
+        idList: list_id,
+        name: name
+      },
+      success: function(response){
+        console.log(response);
+        form.find('.name').val(''); // 清空文本框
+        messageElement.text('递交成功'); // 显示递交成功的消息
+        setTimeout(function() {
+          messageElement.text(''); // 1 秒后清除消息
+        }, 1000);
+      },
+      error: function(error){
+        console.log(error);
+        messageElement.text('递交失败'); // 显示递交失败的消息
+      }
+    });
+  });
+});
+</script>
 
-    // 返回要插入的表单
-    return "
-        <form class='note-form' action='" . esc_url(admin_url('admin-post.php')) . "' method='POST'>
-            <input type='hidden' name='action' value='submit_note_form'>
-            <input type='hidden' name='idList' value='{$atts['idlist']}'>
-            <label for='note'>Note:</label><br>
-            <textarea id='note' name='note' rows='4' cols='50'></textarea><br>
-            <input type='submit' value='Submit'>
-        </form>
-    ";
-}
-add_shortcode('note_form', 'note_form');
-
-function handle_note_form_submission() {
-    $idList = $_POST['idList'];
-    $note = $_POST['note'];
-
-    $response = wp_remote_post('https://api.trello.com/1/cards', [
-        'body' => [
-            'key' => 'f45b896485c79fe922e7f022a8bc6f71',
-            'token' => 'ATTAae59e22e7d144839c54a444aa4f24d4f3ede09405b11ace472e773a78a23b0e8F2D629A2',
-            'idList' => $idList,
-            'name' => $note
-        ]
-    ]);
-
-    // 重定向回原始页面
-    wp_redirect($_SERVER['HTTP_REFERER']);
-    exit;
-}
-add_action('admin_post_nopriv_submit_note_form', 'handle_note_form_submission');
-add_action('admin_post_submit_note_form', 'handle_note_form_submission');
 """
 
 
