@@ -1000,7 +1000,7 @@ def surgical_arrange_check(pList, attentding, aName):
         arrangeListdf = arrangeListdf[arrangeListdf['NoticeFlag'] != '取消']
 
         arrangeListdf.to_excel(
-            f"D:\\working-sync\\手术通知\\{nextToDay_str}-{aName}.xlsx", index=False)
+            f"D:\\working-sync\\手术通知\\预约清单-{nextToDay_str}-{aName}.xlsx", index=False)
 
     # check surgery
     unRegister = requests.get(
@@ -1021,6 +1021,7 @@ def surgical_arrange_check(pList, attentding, aName):
     if not bookListdf.empty:
         bookList = bookListdf[['PatientName', 'drremark', 'PatientID', 'NoticeFlag', 'PatientSex',
                                'AppointmentIn', 'AppOperativeDate', 'Doctor', 'Diagnose', 'Isroom', 'PatientAge']].copy()
+
         # bookList 的PatientID列名改为mrn
         bookList.rename(columns={'PatientID': 'mrn'}, inplace=True)
         # 删除bookList的 NoticeFlag为“取消”的行
@@ -1028,6 +1029,12 @@ def surgical_arrange_check(pList, attentding, aName):
         # 将 'mrn' 列转换为字符串类型
         bookList.loc[:, 'mrn'] = bookList['mrn'].astype(str)
         pList.loc[:, 'mrn'] = pList['mrn'].astype(str)
+
+        # 将'AppointmentIn'和'AppOperativeDate'最后的“T00:00:00”删除
+        bookList.loc[:, 'AppointmentIn'] = bookList['AppointmentIn'].str.replace(
+            "T00:00:00", "")
+        bookList.loc[:, 'AppOperativeDate'] = bookList['AppOperativeDate'].str.replace(
+            "T00:00:00", "")
 
         # 删除pList里mrn列与booklist中的mrn列相同的行
         pListLeft = pList[~pList['mrn'].isin(bookList['mrn'])]
@@ -1053,7 +1060,7 @@ def surgical_arrange_check(pList, attentding, aName):
         surgicalCheck = pd.merge(bookList, surgicalList, on='mrn', how='left')
 
         surgicalCheck = surgicalCheck[['room', 'cdo', 'PatientName', 'mrn', 'PatientSex', 'PatientAge',
-                                       'Isroom', 'Diagnose', 'drremark', 'operp', 'Doctor']]
+                                       'Isroom', 'Diagnose', 'drremark', 'operp', 'Doctor', 'AppointmentIn', 'AppOperativeDate']]
         # surgicalCheck 根据 room 和 cdo 升序排序
         surgicalCheck = surgicalCheck.sort_values(by=['room', 'cdo'])
         # 并将cdo列改成int格式
@@ -1067,5 +1074,8 @@ def surgical_arrange_check(pList, attentding, aName):
         surgicalCheck = bookList[['PatientName', 'mrn', 'PatientSex',
                                   'PatientAge', 'Isroom', 'Diagnose', 'drremark', 'Doctor']]
         inpatientCheck = pListLeft[['bedid', 'pname', 'mrn', 'diag']]
+
+    surgicalCheck.to_excel(
+        f"D:\\working-sync\\手术通知\\手术清单-{nextToDay_str}-{aName}.xlsx", index=False)
 
     return surgicalCheck, inpatientCheck, arrangeListdf, fromDay_str, toDay_str, nextFromDay_str, nextToDay_str
