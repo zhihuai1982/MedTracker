@@ -354,7 +354,15 @@ def get_order(mrn, series, idList, query):
 
     # 抗生素列表
     antibioticList = [
-        '[集采]头孢他啶针 1gX1', '[集采]左氧氟沙星针 0.5g:100mlX1', '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '亚胺培南西司他丁针 0.5/0.5gX1', '[西力欣]头孢呋辛针 750mgX1', '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1', '头孢哌酮舒巴坦针 1.5gX1']
+        '[集采]头孢他啶针 1gX1',
+        '[集采]左氧氟沙星针 0.5g:100mlX1',
+        '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1',
+        '亚胺培南西司他丁针 0.5/0.5gX1',
+        '[西力欣]头孢呋辛针 750mgX1',
+        '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1',
+        '头孢哌酮舒巴坦针 1.5gX1',
+        '亚胺培南西司他丁针 0.5/0.5gX1',
+    ]
 
     # workflow
     # 早上筛查出需要续期抗生素的列表，创建新卡片
@@ -615,11 +623,8 @@ def medicalHistory(hDocuList):
     # 使用正则表达式分割字符串
     parts = re.split(r'(\d+、)', medicalHistory)
 
-    # 移除第一个元素，因为它是空的
-    parts = parts[1:]
-
     # 在每个部分之间添加回车键
-    parts = [parts[i] + '<br>' if i % 2 != 0 else parts[i]
+    parts = [parts[i] + '<br>' if i % 2 == 0 else parts[i]
              for i in range(len(parts))]
 
     # 使用空字符串合并所有部分
@@ -963,7 +968,7 @@ def surgical_arrange_check(pList, attentding, aName):
     elif weekday == 3:
         nextFromDay = today + rd.relativedelta(weekday=rd.FR)
         nextToDay = today + rd.relativedelta(weekday=rd.TU)
-    elif weekday == 4 or weekday == 5 or weekday == 6:
+    elif weekday == 4 or weekday == 5 or weekday == 6 or weekday == 0:
         nextFromDay = today + rd.relativedelta(weekday=rd.FR(-1))
         nextToDay = today + rd.relativedelta(weekday=rd.TU)
 
