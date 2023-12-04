@@ -325,7 +325,6 @@ def get_nurse_doc(mrn, series):
 # 医嘱
 # http://20.21.1.224:5537/api/api/EmrCope/getPatientOrder/4878420/17/40/true
 
-
 def get_order(mrn, series, idList, query):
     orderUrl = f"http://20.21.1.224:5537/api/api/EmrCope/getPatientOrder/{
         mrn}/{series}/40/true"
@@ -339,13 +338,26 @@ def get_order(mrn, series, idList, query):
     # 保留datestop大于当前时间的行
     # 保留orderflag1 不为 NSC 的行
     df = pd.DataFrame(response)[
-        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'duration']]
+        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'datestart']]
     # convert datestop column to timestamp object
     # 保留未停医嘱
     df['datestop'] = pd.to_datetime(df['datestop'])
-    df = df[df['datestop'] > pd.Timestamp.now()]
+    df['datestart'] = pd.to_datetime(df['datestart'])
 
-    df = df[df['orderflag1'] != 'NSC']
+    # df筛选出ordertype为"R"且datestop列大于当前时间的行 或者 ordertype为"S"且datestart列大于当前日期提前一天的行
+    df = df[((df['datestop'] > pd.Timestamp.now()) & (df['ordertype'] == "R")) |
+            ((df['datestart'] > pd.Timestamp.now().normalize() - pd.Timedelta(days=1)) & (df['ordertype'] == "S"))]
+
+    # 创建一个字典，用于替换checkitem里的内容
+    # 比如将 “ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查”替换为“生化全套”
+    orderItemDict = {
+        "GGT/MG/同型半胱氨酸/生化筛查常规检查/视黄醇结合蛋白/TBA(空腹)/血清胱抑素(Cystatin C)测定/β-羟丁酸/游离脂肪酸/Ca/AST/血清淀粉样蛋白/超敏C反应蛋白(hsCRP)/LP(a)/LDL/ADA:血清/ALP/PHO": "生化全套",
+        "纤维蛋白原(FG)/部分凝血活酶时间(APTT)/凝血酶原时间(PT)/D-Di(仅限入院筛查)": "凝血功能全套",
+        "梅毒筛选/AHBCIgM/前S抗原/乙肝三系检查/HIVAb/HCVAb": "术前免疫",
+        "HBsAg快,HCVAb快,HIVAgAb,梅毒快,TRUST,梅毒TPPA": "日间免疫",
+        "ABScreen,Rh表型CcEe": "血型"}
+    # 利用字典替换checkitem列的内容
+    df['drname'] = df['drname'].replace(orderItemDict)
 
     # 计算剩余时间
     df['dateleft'] = df['datestop'] - pd.Timestamp.now()
@@ -410,7 +422,7 @@ def get_order(mrn, series, idList, query):
     df = df[~df['drname'].isin(ignoreList)]
 
     # df 根据 ordertype 和 dateleft 逆序排序
-    df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[False, True])
+    df = df.sort_values(by=['ordertype', 'dateleft'], ascending=[True, True])
 
     # dateleft列的显示格式改为  1days 5hours
     df['dateleft_dh'] = df['dateleft'].apply(
@@ -445,12 +457,13 @@ def get_order(mrn, series, idList, query):
 
     return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
 
-
 # %%
 # 手术记录
 
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/9454931/10/emr").json()
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/9718076/2/emr").json()
+
+
 def surgicalRecord(hDocuList):
 
     if isinstance(hDocuList, dict):
