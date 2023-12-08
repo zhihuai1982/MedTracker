@@ -488,6 +488,7 @@ if jsondata.get('modified').split('T')[0] == today:
 else:
     todayPostID = ''
 
+# todayPostID = ''
 url = f"https://www.digitalnomad.host:8766/wp-json/wp/v2/posts/{todayPostID}"
 post = {
     'title': f"患者病情简报 - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",

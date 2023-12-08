@@ -338,7 +338,9 @@ def get_order(mrn, series, idList, query):
     # 保留datestop大于当前时间的行
     # 保留orderflag1 不为 NSC 的行
     df = pd.DataFrame(response)[
-        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'datestart']]
+        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'datestart', 'mark']]
+    df = df[df['mark'] != '护理评估智能决策']
+    df = df[df['orderflag1'] != 'NSC']
     # convert datestop column to timestamp object
     # 保留未停医嘱
     df['datestop'] = pd.to_datetime(df['datestop'])
@@ -416,7 +418,33 @@ def get_order(mrn, series, idList, query):
             )
 
     ignoreList = ['饮水大于1500ML/日（如无禁忌）', '早期下床活动（如无禁忌）',
-                  '宣教预防VTE相关知识', '氯化钠注射液 0.9%:100mlX1', '瑞芬太尼针 2mgX5', '[国产]舒芬太尼针 50ug:1mlX1']
+                  '宣教预防VTE相关知识',
+                  '氯化钠注射液 0.9%:100mlX1',
+                  '瑞芬太尼针 2mgX5',
+                  '[集采]右美托咪定针 200ug:2mlX1',
+                  '[进口]罗哌卡因针 75mg:10mlX5',
+                  '间羟胺针 10mg:1mlX2',
+                  '麻黄硷针 30mg:1mlX10',
+                  '[仙居]苯磺顺阿曲库铵针 5mgX1',
+                  '[凯特力]七氟烷 ml',
+                  '乳酸钠林格注射液 500mlX1',
+                  '[万汶]羟乙基淀粉针 500ml:30g/4.5gX1',
+                  '复方电解质针 500mlX1',
+                  '瑞马唑仑针 36mgX1',
+                  '依托咪酯针 20mg:10mlX1',
+                  '格拉司琼针 3mg:3mlX5',
+                  '阿托品针 0.5mg:1mlX10',
+                  '纳布啡针 1ml:10mgX1',
+                  '[竟安]丙泊酚中/长链脂肪乳针 0.5g:50mlX1',
+                  '新斯的明针 1mg:2mlX10',
+                  '[国产]舒芬太尼针 50ug:1mlX1',
+                  '[集采]丙泊酚中/长链脂肪乳针 0.2g:20mlX1',
+                  '',
+                  '',
+                  '',
+                  '',
+                  '',
+                  ]
 
     # 如果df的drname列包含ignoreList中的元素，则删除该行
     df = df[~df['drname'].isin(ignoreList)]
@@ -456,6 +484,8 @@ def get_order(mrn, series, idList, query):
             return ['']*len(row)
 
     return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
+    # return df.style.hide(subset='dateleft', axis=1).hide().apply(highlight_today, axis=1).to_html()
+    # return df.to_html()
 
 # %%
 # 手术记录
@@ -798,7 +828,17 @@ def highcharts(mrn, series):
     """
 
     # 筛选df中content包含 “负压管”的行保存至draingage_df
-    draingage_df = df[df['content'].str.contains('负压管', na=False)].copy()
+
+    # draingage_df = df[df['content'].str.contains('负压管|皮下引流管', na=False)].copy()
+    # 创建一个列表
+    tube_types = ["负压管", "皮下引流管", "腹腔负压引流", "管", "切口引流"]
+
+    # 使用 join() 函数将列表中的元素连接成一个字符串
+    tube_types_str = "|".join(tube_types)
+
+    # 使用这个字符串和正则表达式进行筛选
+    draingage_df = df[df['content'].str.extract(
+        f'({tube_types_str})\\d*: *\\d+ml', expand=False).notna()].copy()
 
     # 如果 draingage_df 为空，则返回空值
     if draingage_df.empty:
@@ -816,6 +856,12 @@ def highcharts(mrn, series):
 
     # volume列转换为数值
     draingage_df.loc[:, 'volume'] = pd.to_numeric(draingage_df['volume'])
+
+    # 如果content里包含“尿”，则将volume列的值除以10，并在content的内容里添加“/10”
+    draingage_df.loc[draingage_df['tubeTag'].str.contains(
+        "尿", na=False), 'volume'] = draingage_df['volume'] / 10
+    draingage_df.loc[draingage_df['tubeTag'].str.contains(
+        "尿", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/10"
 
     # print(draingage_df[['pointInTimel','content','tubeTag','volume']])
 
@@ -974,7 +1020,7 @@ def surgical_arrange_check(pList, attentding, aName):
         toDay = today + rd.relativedelta(weekday=rd.TU)
 
     if weekday == 1 or weekday == 2:
-        nextFromDay = today + rd.relativedelta(weekday=rd.WE)
+        nextFromDay = today + rd.relativedelta(weekday=rd.TU(-1))
         nextToDay = today + rd.relativedelta(weekday=rd.TH)
     elif weekday == 3:
         nextFromDay = today + rd.relativedelta(weekday=rd.FR)
