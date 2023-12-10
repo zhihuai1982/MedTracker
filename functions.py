@@ -103,17 +103,36 @@ def get_lab_results(mrn, duration):
     hLabList = requests.get(
         f"http://20.21.1.224:5537/api/api//LisReport/GetLisReportIndexHalf/{mrn}/1").json()
 
+    # 创建一个字典，用于替换checkitem里的内容
+    checkitemDict = {
+        "CBC,ABO输血,RH输血": "血常规",
+        "HCVAb,HIVAb,梅毒筛选,AHBCIgM,前S抗原,乙肝定量": "术前免疫",
+        "HBsAg快,HCVAb快,HIVAgAb,梅毒快,TRUST,梅毒TPPA": "日间免疫",
+        "ABScreen,Rh表型CcEe": "血型"}
+
+    # %%
+    # 利用字典替换hLabList里checkitem的内容
+    for item in hLabList:
+        item['checkitem'] = checkitemDict.get(
+            item['checkitem'], item['checkitem'])
+
+    # 如果 hLabList 中 checkitem 包含 "生化"或者“ADA”或者“肝功能”，则将 checkitem 替换为 "生化全套"
+    for item in hLabList:
+        if "生化" in item['checkitem'] or "ADA" in item['checkitem'] or "肝功能" in item['checkitem'] or "电解质" in item['checkitem']:
+            item['checkitem'] = "生化检查"
+
+    for item in hLabList:
+        if "血气" in item['checkitem']:
+            item['checkitem'] = "血气检查"
+
     # 根据hLabList里的bgsj筛选出大于当前日期-duration（天）的数据
     hLabListLimit = [item for item in hLabList if (
         pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days <= duration]
 
-    checkitemList = ['CBC', 'hsCRP', 'K', 'Ca']
-    # 筛选出 hLabList 中 checkitem 包含 checkitemList 中的数据的字典
-
-    hLabListSelect = [
-        item for item in hLabList if (any(
-            d in item['checkitem'] for d in checkitemList)) and ((
-                pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days > duration)]
+    checkitemList = ['CBC', 'hsCRP', "生化检查", "血气检查"]
+    # 筛选出 hLabList 中 checkitem 包含在 checkitemList 中的字典
+    hLabListSelect = [item for item in hLabList if item['checkitem'] in checkitemList and (
+        pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days > duration]
 
     # hLabListSelect按照checkitem分组，选取每一组中时间最近的一条数据
     if hLabListSelect:
@@ -167,17 +186,6 @@ def get_lab_results(mrn, duration):
     df = df.sort_values(by='bgsj', ascending=False)
     # 将bgsj转换成日期格式
     df['bgsj'] = pd.to_datetime(df['bgsj']).dt.strftime('%Y-%m-%d')
-
-    # 创建一个字典，用于替换checkitem里的内容
-    # 比如将 “ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查”替换为“生化全套”
-    checkitemDict = {
-        "ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查": "生化全套",
-        "CBC,ABO输血,RH输血": "血常规",
-        "HCVAb,HIVAb,梅毒筛选,AHBCIgM,前S抗原,乙肝定量": "术前免疫",
-        "HBsAg快,HCVAb快,HIVAgAb,梅毒快,TRUST,梅毒TPPA": "日间免疫",
-        "ABScreen,Rh表型CcEe": "血型"}
-    # 利用字典替换checkitem列的内容
-    df['checkitem'] = df['checkitem'].replace(checkitemDict)
 
     df.rename(columns={'xmmc': '项目名称', 'jg': '结果', 'zdbz': 'R',
               'ckqj': '参考范围', 'bgsj': '检验日期', 'checkitem': '检验项目'}, inplace=True)
@@ -504,10 +512,14 @@ def get_order(mrn, series, idList, query):
 
     # 定义固定列的样式
     columnFixStyle = [
-        {'selector': 'th:nth-child(1), td:nth-child(1)',
-         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: white;'},
-        {'selector': 'th:nth-child(2), td:nth-child(2)',
-         'props': 'position: -webkit-sticky; position: sticky; left:300px; background-color: white;'},
+        {'selector': 'tr:nth-child(odd) th:nth-child(1), tr:nth-child(odd) td:nth-child(1)',
+         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #f6f6f6;'},
+        {'selector': 'tr:nth-child(even) th:nth-child(1), tr:nth-child(even) td:nth-child(1)',
+         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #ffffff;'},
+        {'selector': 'tr:nth-child(odd) th:nth-child(2), tr:nth-child(odd) td:nth-child(2)',
+         'props': 'position: -webkit-sticky; position: sticky; left:300px; background-color: #f6f6f6;'},
+        {'selector': 'tr:nth-child(even) th:nth-child(2), tr:nth-child(even) td:nth-child(2)',
+         'props': 'position: -webkit-sticky; position: sticky; left:300px; background-color: #ffffff;'},
     ]
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
@@ -518,7 +530,7 @@ def get_order(mrn, series, idList, query):
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1200px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).to_html()
+    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1300px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).to_html()
 
     # return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
     # return df.style.hide(subset='dateleft', axis=1).hide().apply(highlight_today, axis=1).to_html()
@@ -654,6 +666,10 @@ def consultation(hDocuList):
 
     # 根据会诊时间逆序排列
     consultationRes = consultationRes.sort_values(by='会诊时间', ascending=False)
+
+    # 删除会诊时间距离当前日期大于1周的行
+    consultationRes = consultationRes[(
+        datetime.datetime.now() - pd.to_datetime(consultationRes['会诊时间'])).dt.days <= 7]
 
     def highlight_today(row):
         if (datetime.datetime.now().date() - pd.to_datetime(row['会诊时间']).date()).days <= 1:
@@ -1261,14 +1277,29 @@ def surgical_arrange(pList, attending, aName):
          'props': [('width', '100px')]}             # plandate
     ]
 
+    # columnFixStyle = [
+    #     {'selector': 'th:nth-child(1), td:nth-child(1)',
+    #      'props': 'position: -webkit-sticky; position: sticky; left:0px; '},
+    #     {'selector': 'th:nth-child(2), td:nth-child(2)',
+    #      'props': 'position: -webkit-sticky; position: sticky; left:50px;'},
+    #     {'selector': 'th:nth-child(3), td:nth-child(3)',
+    #      'props': 'position: -webkit-sticky; position: sticky; left:100px;'}
+    # ]
+
     # 定义固定列的样式
     columnFixStyle = [
-        {'selector': 'th:nth-child(1), td:nth-child(1)',
-         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: white;'},
-        {'selector': 'th:nth-child(2), td:nth-child(2)',
-         'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: white;'},
-        {'selector': 'th:nth-child(3), td:nth-child(3)',
-         'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: white;'}
+        {'selector': 'tr:nth-child(odd) th:nth-child(1), tr:nth-child(odd) td:nth-child(1)',
+         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #f6f6f6;'},
+        {'selector': 'tr:nth-child(even) th:nth-child(1), tr:nth-child(even) td:nth-child(1)',
+         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #ffffff;'},
+        {'selector': 'tr:nth-child(odd) th:nth-child(2), tr:nth-child(odd) td:nth-child(2)',
+         'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #f6f6f6;'},
+        {'selector': 'tr:nth-child(even) th:nth-child(2), tr:nth-child(even) td:nth-child(2)',
+         'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #ffffff;'},
+        {'selector': 'tr:nth-child(odd) th:nth-child(3), tr:nth-child(odd) td:nth-child(3)',
+         'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #f6f6f6;'},
+        {'selector': 'tr:nth-child(even) th:nth-child(3), tr:nth-child(even) td:nth-child(3)',
+         'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #ffffff;'},
     ]
 
     arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2000px;"').set_table_styles(
