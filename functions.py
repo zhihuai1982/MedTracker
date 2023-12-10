@@ -479,7 +479,7 @@ def get_order(mrn, series, idList, query):
         lambda x: f"{x.days}d {x.seconds // 3600}h")
 
     df = df[['drname', 'ordertype', 'dosage',
-             'frequency', 'dateleft', 'dateleft_dh']]
+             'frequency', 'dateleft', 'dateleft_dh', 'datestart', 'datestop']]
     df.rename(columns={'drname': '医嘱名称', 'ordertype': 'T',
               'dosage': '剂量', 'frequency': '频次', 'dateleft_dh': '剩余时间'}, inplace=True)
 
@@ -487,25 +487,40 @@ def get_order(mrn, series, idList, query):
 
     orderStyles = [
         {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '300px')]},
+            'props': [('width', '300px')]},         # 医嘱名称
         {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '50px')]},
+            'props': [('width', '50px')]},          # T
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '80px')]},
+            'props': [('width', '90px')]},          # 剂量
         {'selector': 'th.col_heading.level0.col3',
-            'props': [('width', '80px')]},
+            'props': [('width', '80px')]},          # 频次
         {'selector': 'th.col_heading.level0.col4',
-            'props': [('width', '100px')]},
+            'props': [('width', '100px')]},         # 剩余时间
+        {'selector': 'th.col_heading.level0.col5',
+            'props': [('width', '300px')]},         # datestart
+        {'selector': 'th.col_heading.level0.col6',
+            'props': [('width', '300px')]},         # datestop
+    ]
+
+    # 定义固定列的样式
+    columnFixStyle = [
+        {'selector': 'th:nth-child(1), td:nth-child(1)',
+         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: white;'},
+        {'selector': 'th:nth-child(2), td:nth-child(2)',
+         'props': 'position: -webkit-sticky; position: sticky; left:300px; background-color: white;'},
     ]
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
+
     def highlight_today(row):
         if (row['dateleft'] < pd.Timedelta(hours=12)) & (row['T'] == "R"):
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
+    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1200px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).to_html()
+
+    # return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
     # return df.style.hide(subset='dateleft', axis=1).hide().apply(highlight_today, axis=1).to_html()
     # return df.to_html()
 

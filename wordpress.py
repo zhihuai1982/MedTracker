@@ -153,7 +153,8 @@ for index, row in pList.iterrows():
     pContent += get_nurse_doc(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
-    pContent += get_order(row['mrn'], row['series'], row['id'], query)
+    pContent += "<div class='table-container'> " + \
+        get_order(row['mrn'], row['series'], row['id'], query)+"</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += medicalHistory(hDocuList)
@@ -326,7 +327,8 @@ for index, row in pList.iterrows():
     pContent += get_nurse_doc(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
-    pContent += get_order(row['mrn'], row['series'], row['id'], query)
+    pContent += "<div class='table-container'> " + \
+        get_order(row['mrn'], row['series'], row['id'], query)+"</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += medicalHistory(hDocuList)
