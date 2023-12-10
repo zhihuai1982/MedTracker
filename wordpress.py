@@ -161,64 +161,16 @@ for index, row in pList.iterrows():
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += surgicalRecord(hDocuList)
 
-
-surgical_check_df, inpatient_check_df, surgical_arrange_df, fromDay_str, toDay_str, nextFromDay_str, nextToDay_str = surgical_arrange_check(
-    pList, "30043", "侯铁宁")
-
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
-pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>预约患者手术安排 {
-    fromDay_str}_{toDay_str}</h2>\n<!-- /wp:heading -->\n"
+arrangeList, arrangeListHtml = surgical_arrange(pList, 30043, "侯铁宁")
 
-# 如果 surgical_check_df 有 11 列
-if surgical_check_df.shape[1] == 11:
-    surgicalStyles = [
-        {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '80px')]},
-        {'selector': 'th.col_heading.level0.col3',
-            'props': [('width', '80px')]},
-        {'selector': 'th.col_heading.level0.col4',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col5',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col6',
-            'props': [('width', '60px')]},
-        {'selector': 'th.col_heading.level0.col7',
-            'props': [('width', '100px')]},
-        {'selector': 'th.col_heading.level0.col8',
-            'props': [('width', '100px')]},
-        {'selector': 'th.col_heading.level0.col9',
-            'props': [('width', '180px')]},
-        {'selector': 'th.col_heading.level0.col10',
-            'props': [('width', '100px')]}
-    ]
-    pContent += "<div class='table-container'> " + \
-        surgical_check_df.style.hide().set_table_styles(
-            surgicalStyles).to_html() + "</div>\n"
-else:
-    pContent += "<div class='table-container'> " + \
-        surgical_check_df.to_html(index=False) + "</div>\n"
-
-pContent += "<!-- wp:heading -->\n<h2 class='wp-block-heading'>在院患者手术安排</h2>\n<!-- /wp:heading -->\n"
-
-pContent += "<div class='table-container'> " + \
-    inpatient_check_df.to_html(index=False) + "</div>\n"
-
-pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>NEXT患者 {
-    nextFromDay_str}_{nextToDay_str}</h2>\n<!-- /wp:heading -->\n"
-
-pContent += "<div class='table-container'> " + \
-    surgical_arrange_df.to_html(index=False) + "</div>\n"
-
+pContent += "<div class='table-container'> " + arrangeListHtml + "</div>\n"
 
 # %%
 
 # 筛选出rj_df里 Isroom为“日间“的列
-rj_df = surgical_check_df[surgical_check_df['Isroom'] == '日间'].copy()
+rj_df = arrangeList[arrangeList['Isroom'] == '日间'].copy()
 
 # rj_df 删除mrn列与pList的mrn相同的行
 rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
@@ -226,8 +178,8 @@ rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
 # 如果rj_df不为空
 if not rj_df.empty:
     # 新建 pBrief 列，格式为 PatientName+mrn+Diagnose
-    rj_df.loc[:, 'pBrief'] = rj_df['PatientName'].str.cat(
-        rj_df[['mrn', 'Diagnose']].astype(str), sep='+')
+    rj_df.loc[:, 'pBrief'] = rj_df['pname'].str.cat(
+        rj_df[['mrn', 'diag']].astype(str), sep='+')
 
     pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>日间手术</h1>\n<!-- /wp:heading -->\n"
 
@@ -382,63 +334,17 @@ for index, row in pList.iterrows():
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += surgicalRecord(hDocuList)
 
-surgical_check_df, inpatient_check_df, surgical_arrange_df, fromDay_str, toDay_str, nextFromDay_str, nextToDay_str = surgical_arrange_check(
-    pList, "30259", "肖芒")
-
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
-pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>预约患者手术安排 {
-    fromDay_str}_{toDay_str}</h2>\n<!-- /wp:heading -->\n"
 
-# 如果 surgical_check_df 有 11 列
-if surgical_check_df.shape[1] == 11:
-    surgicalStyles = [
-        {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '80px')]},
-        {'selector': 'th.col_heading.level0.col3',
-            'props': [('width', '80px')]},
-        {'selector': 'th.col_heading.level0.col4',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col5',
-            'props': [('width', '40px')]},
-        {'selector': 'th.col_heading.level0.col6',
-            'props': [('width', '60px')]},
-        {'selector': 'th.col_heading.level0.col7',
-            'props': [('width', '100px')]},
-        {'selector': 'th.col_heading.level0.col8',
-            'props': [('width', '100px')]},
-        {'selector': 'th.col_heading.level0.col9',
-            'props': [('width', '180px')]},
-        {'selector': 'th.col_heading.level0.col10',
-            'props': [('width', '100px')]}
-    ]
-    pContent += "<div class='table-container'> " + \
-        surgical_check_df.style.hide().set_table_styles(
-            surgicalStyles).to_html() + "</div>\n"
-else:
-    pContent += "<div class='table-container'> " + \
-        surgical_check_df.to_html(index=False) + "</div>\n"
+arrangeList, arrangeListHtml = surgical_arrange(pList, 30259, "肖芒")
 
-pContent += "<!-- wp:heading -->\n<h2 class='wp-block-heading'>在院患者手术安排</h2>\n<!-- /wp:heading -->\n"
-
-pContent += "<div class='table-container'> " + \
-    inpatient_check_df.to_html(index=False) + "</div>\n"
-
-pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>NEXT患者 {
-    nextFromDay_str}_{nextToDay_str}</h2>\n<!-- /wp:heading -->\n"
-
-pContent += "<div class='table-container'> " + \
-    surgical_arrange_df.to_html(index=False) + "</div>\n"
-
+pContent += "<div class='table-container'> " + arrangeListHtml + "</div>\n"
 
 # %%
 
 # 筛选出rj_df里 Isroom为“日间“的列
-rj_df = surgical_check_df[surgical_check_df['Isroom'] == '日间'].copy()
+rj_df = arrangeList[arrangeList['Isroom'] == '日间'].copy()
 
 # rj_df 删除mrn列与pList的mrn相同的行
 rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
@@ -446,8 +352,8 @@ rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
 # 如果rj_df不为空
 if not rj_df.empty:
     # 新建 pBrief 列，格式为 PatientName+mrn+Diagnose
-    rj_df.loc[:, 'pBrief'] = rj_df['PatientName'].str.cat(
-        rj_df[['mrn', 'Diagnose']].astype(str), sep='+')
+    rj_df.loc[:, 'pBrief'] = rj_df['pname'].str.cat(
+        rj_df[['mrn', 'diag']].astype(str), sep='+')
 
     pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>日间手术</h1>\n<!-- /wp:heading -->\n"
 

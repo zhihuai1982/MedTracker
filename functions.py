@@ -103,25 +103,49 @@ def get_lab_results(mrn, duration):
     hLabList = requests.get(
         f"http://20.21.1.224:5537/api/api//LisReport/GetLisReportIndexHalf/{mrn}/1").json()
 
-    # 根据hLabList里的dodate筛选出大于当前日期-duration（天）的数据
-    hLabList = [item for item in hLabList if (
-        pd.Timestamp.now() - pd.Timestamp(item['dodate'])).days <= duration]
+    # 根据hLabList里的bgsj筛选出大于当前日期-duration（天）的数据
+    hLabListLimit = [item for item in hLabList if (
+        pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days <= duration]
 
-    if not hLabList:
+    checkitemList = ['CBC', 'hsCRP', 'K', 'Ca']
+    # 筛选出 hLabList 中 checkitem 包含 checkitemList 中的数据的字典
+
+    hLabListSelect = [
+        item for item in hLabList if (any(
+            d in item['checkitem'] for d in checkitemList)) and ((
+                pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days > duration)]
+
+    # hLabListSelect按照checkitem分组，选取每一组中时间最近的一条数据
+    if hLabListSelect:
+        hLabListSelect = pd.DataFrame(hLabListSelect).sort_values(
+            by=['checkitem', 'repdate'], ascending=[True, False]).groupby('checkitem').head(1).to_dict(orient='records')
+
+    # 合并hLabListLimit和hLabListSelect
+    hLabListTotal = hLabListLimit+hLabListSelect
+
+    if not hLabListTotal:
         return "No match found"
 
     totalLabRes = []
-    for lab in hLabList:
+    for lab in hLabListTotal:
         url = f"http://20.21.1.224:5537/api/api/LisReport/GetLisReportDetail/{
             mrn}/{lab['dodate']}/{lab['specimenid']}/{lab['domany']}"
         labRes = requests.get(url).json()
         for item in labRes:
-            item['dodate'] = lab['dodate']
+            # item['bgsj'] = lab['repdate']
             item['checkitem'] = lab['checkitem']
         totalLabRes.extend(labRes)  # 将 labRes 的结果添加到 totalLabRes 列表中
 
     df = pd.DataFrame(totalLabRes)  # 将 totalLabRes 列表转换为 DataFrame
-    df = df[['xmmc', 'jg', 'zdbz', 'ckqj', 'dodate', 'checkitem']]  # 选择需要的列
+    df = df[['xmmc', 'jg', 'zdbz', 'ckqj', 'bgsj', 'checkitem']]  # 选择需要的列
+
+    # 创建一个包含重点检验结果名称的列表
+    important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐",
+                       "葡萄糖", '尿素/肌酐', '丙氨酸氨基转移酶', '天冬氨酸氨基转移酶', '白蛋白', '超敏C反应蛋白', 'D-二聚体(D-Di)']
+
+    # 删除df中 bgsj 小于当前日期-duration天 且 xmmc 不在 important_tests 中的行
+    df = df[~(((pd.Timestamp.now() - pd.to_datetime(df['bgsj'])
+                ).dt.days > duration) & (~df['xmmc'].isin(important_tests)))]
 
     def process_group(group):
         if group['zdbz'].replace('', pd.NA).isnull().all():  # 如果 'zdbz' 列都是空白
@@ -130,7 +154,7 @@ def get_lab_results(mrn, duration):
                 'jg': 'all阴性',
                 'zdbz': '',
                 'ckqj': '',
-                'dodate': group['dodate'].iloc[0],
+                'bgsj': group['bgsj'].iloc[0],
                 'checkitem': group['checkitem'].iloc[0]
             }])
         else:
@@ -139,10 +163,10 @@ def get_lab_results(mrn, duration):
 
     df = df.groupby('checkitem').apply(process_group).reset_index(drop=True)
 
-    # 将df按照dodate由大到小逆向排序
-    df = df.sort_values(by='dodate', ascending=False)
-    # 将dodate转换成日期格式
-    df['dodate'] = pd.to_datetime(df['dodate']).dt.strftime('%Y-%m-%d')
+    # 将df按照bgsj由大到小逆向排序
+    df = df.sort_values(by='bgsj', ascending=False)
+    # 将bgsj转换成日期格式
+    df['bgsj'] = pd.to_datetime(df['bgsj']).dt.strftime('%Y-%m-%d')
 
     # 创建一个字典，用于替换checkitem里的内容
     # 比如将 “ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查”替换为“生化全套”
@@ -156,7 +180,7 @@ def get_lab_results(mrn, duration):
     df['checkitem'] = df['checkitem'].replace(checkitemDict)
 
     df.rename(columns={'xmmc': '项目名称', 'jg': '结果', 'zdbz': 'R',
-              'ckqj': '参考范围', 'dodate': '检验日期', 'checkitem': '检验项目'}, inplace=True)
+              'ckqj': '参考范围', 'bgsj': '检验日期', 'checkitem': '检验项目'}, inplace=True)
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
@@ -165,11 +189,8 @@ def get_lab_results(mrn, duration):
         else:
             return ['']*len(row)
 
-   # 创建一个包含重点检验结果名称的列表
-    important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐",
-                       "葡萄糖", '尿素/肌酐', '丙氨酸氨基转移酶', '天冬氨酸氨基转移酶', '白蛋白', '超敏C反应蛋白', 'D-二聚体(D-Di)']
-
     # 定义一个函数，该函数检查一个值是否在重点检验结果名称列表中
+
     def highlight_important_tests(val):
         if val['项目名称'] in important_tests:
             return ['color: red']*len(val)
@@ -263,7 +284,7 @@ def get_exam_results(mrn, duration):
             'props': [('width', '300px')]}
     ]
 
-    return df.style.hide().apply(highlight_today, axis=1).set_table_styles(examStyles).to_html(classes="dataframe", table_id="testtable")
+    return df.style.apply(highlight_today, axis=1).hide().set_table_styles(examStyles).to_html(classes="dataframe", table_id="testtable")
 
 
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/4310592/11/emr").json()
@@ -374,6 +395,7 @@ def get_order(mrn, series, idList, query):
         '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1',
         '头孢哌酮舒巴坦针 1.5gX1',
         '亚胺培南西司他丁针 0.5/0.5gX1',
+        '[北京]左氧氟沙星针 0.5g:100mlX1',
     ]
 
     # workflow
@@ -831,7 +853,7 @@ def highcharts(mrn, series):
 
     # draingage_df = df[df['content'].str.contains('负压管|皮下引流管', na=False)].copy()
     # 创建一个列表
-    tube_types = ["负压管", "皮下引流管", "腹腔负压引流", "管", "切口引流"]
+    tube_types = ["负压管", "皮下引流管", "腹腔负压引流", "管", "引流"]
 
     # 使用 join() 函数将列表中的元素连接成一个字符串
     tube_types_str = "|".join(tube_types)
@@ -976,7 +998,7 @@ def trello_note(trelloListId, place):
                     cards.forEach(function (card) {{
                         var name = card.name; // 获取每个card对象的name属性值
                         var shortUrl = card.shortUrl;
-                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"'>"+name+ "</a></li><br>"); // 将每个card的name属性显示在页面上
+                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"' target='_blank'>"+name+ "</a></li><br>"); // 将每个card的name属性显示在页面上
                     }});
                 }} else {{
                     $('#trello-content-1').append("Ajax请求失败")
@@ -998,143 +1020,182 @@ def trello_note(trelloListId, place):
 # %%
 # 手术安排
 
-def surgical_arrange_check(pList, attentding, aName):
+def surgical_arrange(pList, attending, aName):
 
-    # 获取今天的日期
-    today = datetime.date.today()
+    today = datetime.date.today() + datetime.timedelta(days=0)
 
     # 获取今天是星期几（0=星期一，6=星期日）
     weekday = today.weekday()
 
     if weekday == 2:
-        fromDay = today
-        toDay = today + rd.relativedelta(weekday=rd.TH)
+        lastSurgeryDate = today + rd.relativedelta(weekday=rd.TU(-1))
+        prelastSurgeryDate = today + rd.relativedelta(weekday=rd.TH(-1))
+        upcomingSurgeryDate = today + rd.relativedelta(weekday=rd.TH)
+        nextSurgeyDate = today + rd.relativedelta(weekday=rd.TU)
     elif weekday == 3:
-        fromDay = today + rd.relativedelta(weekday=rd.WE(-1))
-        toDay = today
-    elif weekday == 4:
-        fromDay = today
-        toDay = today + rd.relativedelta(weekday=rd.TU)
+        lastSurgeryDate = today + rd.relativedelta(weekday=rd.TU(-1))
+        prelastSurgeryDate = today + rd.relativedelta(weekday=rd.TH(-2))
+        upcomingSurgeryDate = today + rd.relativedelta(weekday=rd.TH)
+        nextSurgeyDate = today + rd.relativedelta(weekday=rd.TU)
+    elif weekday == 1:
+        lastSurgeryDate = today + rd.relativedelta(weekday=rd.TH(-1))
+        prelastSurgeryDate = today + rd.relativedelta(weekday=rd.TU(-2))
+        upcomingSurgeryDate = today + rd.relativedelta(weekday=rd.TU)
+        nextSurgeyDate = today + rd.relativedelta(weekday=rd.TH)
     else:
-        fromDay = today + rd.relativedelta(weekday=rd.FR(-1))
-        toDay = today + rd.relativedelta(weekday=rd.TU)
+        lastSurgeryDate = today + rd.relativedelta(weekday=rd.TH(-1))
+        prelastSurgeryDate = today + rd.relativedelta(weekday=rd.TU(-1))
+        upcomingSurgeryDate = today + rd.relativedelta(weekday=rd.TU)
+        nextSurgeyDate = today + rd.relativedelta(weekday=rd.TH)
 
-    if weekday == 1 or weekday == 2:
-        nextFromDay = today + rd.relativedelta(weekday=rd.TU(-1))
-        nextToDay = today + rd.relativedelta(weekday=rd.TH)
-    elif weekday == 3:
-        nextFromDay = today + rd.relativedelta(weekday=rd.FR)
-        nextToDay = today + rd.relativedelta(weekday=rd.TU)
-    elif weekday == 4 or weekday == 5 or weekday == 6 or weekday == 0:
-        nextFromDay = today + rd.relativedelta(weekday=rd.FR(-1))
-        nextToDay = today + rd.relativedelta(weekday=rd.TU)
+    # print(today, today.weekday()+1)
+    # print(prelastSurgeryDate, prelastSurgeryDate.weekday()+1)
+    # print(lastSurgeryDate, lastSurgeryDate.weekday()+1)
+    # print(upcomingSurgeryDate, upcomingSurgeryDate.weekday()+1)
+    # print(nextSurgeyDate, nextSurgeyDate.weekday()+1)
 
+    # %%
     # 将日期格式化为字符串
-    fromDay_str = fromDay.strftime('%Y-%m-%d')
-    toDay_str = toDay.strftime('%Y-%m-%d')
-    nextFromDay_str = nextFromDay.strftime('%Y-%m-%d')
-    nextToDay_str = nextToDay.strftime('%Y-%m-%d')
+    # today_str = today.strftime('%Y-%m-%d')
+    lastSurgeryDate_str = lastSurgeryDate.strftime('%Y-%m-%d')
+    prelastSurgeryDate_str = prelastSurgeryDate.strftime('%Y-%m-%d')
+    upcomingSurgeryDate_str = upcomingSurgeryDate.strftime('%Y-%m-%d')
+    nextSurgeyDate_str = nextSurgeyDate.strftime('%Y-%m-%d')
 
     # arrange surgery
-    arrange_unRegister = requests.get(
+    schedule_unRegister = requests.get(
         f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            nextFromDay_str}/{nextToDay_str}/1/33/{attentding}/"
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/1/33/{attending}/"
     ).json()
-    arrange_notYetAdmintted = requests.get(
+    schedule_notYetAdmintted = requests.get(
         f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            nextFromDay_str}/{nextToDay_str}/5/33/{attentding}/"
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/5/33/{attending}/"
     ).json()
-    arrange_alreadyAdmintted = requests.get(
+    schedule_alreadyAdmintted = requests.get(
         f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            nextFromDay_str}/{nextToDay_str}/7/33/{attentding}/"
-    ).json()
-
-    # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
-    arrangeListdf = pd.DataFrame(
-        arrange_unRegister+arrange_alreadyAdmintted+arrange_notYetAdmintted)
-    if not arrangeListdf.empty:
-        arrangeListdf = arrangeListdf[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
-                                       'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate']]
-        # 删除bookList的 NoticeFlag为“取消”的行
-        arrangeListdf = arrangeListdf[arrangeListdf['NoticeFlag'] != '取消']
-
-        arrangeListdf.to_excel(
-            f"D:\\working-sync\\手术通知\\预约清单-{nextToDay_str}-{aName}.xlsx", index=False)
-
-    # check surgery
-    unRegister = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            fromDay_str}/{toDay_str}/1/33/{attentding}/"
-    ).json()
-    notYetAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            fromDay_str}/{toDay_str}/5/33/{attentding}/"
-    ).json()
-    alreadyAdmintted = requests.get(
-        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            fromDay_str}/{toDay_str}/7/33/{attentding}/"
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/7/33/{attending}/"
     ).json()
 
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
-    bookListdf = pd.DataFrame(unRegister+notYetAdmintted+alreadyAdmintted)
-    if not bookListdf.empty:
-        bookList = bookListdf[['PatientName', 'drremark', 'PatientID', 'NoticeFlag', 'PatientSex',
-                               'AppointmentIn', 'AppOperativeDate', 'Doctor', 'Diagnose', 'Isroom', 'PatientAge']].copy()
+    surgeryScheduleDF = pd.DataFrame(
+        schedule_unRegister+schedule_notYetAdmintted+schedule_alreadyAdmintted)
 
-        # bookList 的PatientID列名改为mrn
-        bookList.rename(columns={'PatientID': 'mrn'}, inplace=True)
-        # 删除bookList的 NoticeFlag为“取消”的行
-        bookList = bookList[bookList['NoticeFlag'] != '取消']
-        # 将 'mrn' 列转换为字符串类型
-        bookList.loc[:, 'mrn'] = bookList['mrn'].astype(str)
-        pList.loc[:, 'mrn'] = pList['mrn'].astype(str)
+    # %%
+    surgeryScheduleDF = surgeryScheduleDF[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
+                                           'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode']]
+    # 删除bookList的 NoticeFlag为“取消”的行
+    surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF['NoticeFlag'] != '取消']
 
-        # 将'AppointmentIn'和'AppOperativeDate'最后的“T00:00:00”删除
-        bookList.loc[:, 'AppointmentIn'] = bookList['AppointmentIn'].str.replace(
-            "T00:00:00", "")
-        bookList.loc[:, 'AppOperativeDate'] = bookList['AppOperativeDate'].str.replace(
-            "T00:00:00", "")
+    # arrangeListdf.to_excel(
+    #     f"D:\\working-sync\\手术通知\\预约清单-{nextToDay_str}-{aName}.xlsx", index=False)
 
-        # 删除pList里mrn列与booklist中的mrn列相同的行
-        pListLeft = pList[~pList['mrn'].isin(bookList['mrn'])]
-    else:
-        bookList = pd.DataFrame(columns=['PatientName', 'mrn', 'PatientSex',
-                                         'PatientAge', 'Isroom', 'Diagnose', 'drremark', 'Doctor'])
-        pListLeft = pList
+    surgeryScheduleDF.rename(
+        columns={'PatientID': 'mrn', 'PatientName': 'pname', 'Diagnose': 'diag'}, inplace=True)
 
-    surgicalListRaw = requests.get(
+    surgeryScheduleDF.loc[:, 'mrn'] = surgeryScheduleDF['mrn'].astype(str)
+    pList.loc[:, 'mrn'] = pList['mrn'].astype(str)
+
+    # 将surgeryScheduleDF和pList根据mrn列合并
+    scheduleList = surgeryScheduleDF.merge(
+        pList, on=['mrn', 'pname', 'diag'], how="outer")
+
+    # 删除 schdeuleList 里 dohoscode为 钱塘院区 的行
+    scheduleList = scheduleList[scheduleList['dohoscode'] != '钱塘院区']
+
+    scheduleList.loc[:, 'AppointmentIn'] = scheduleList['AppointmentIn'].str.replace(
+        "T00:00:00", "")
+    scheduleList.loc[:, 'AppOperativeDate'] = scheduleList['AppOperativeDate'].str.replace(
+        "T00:00:00", "")
+    scheduleList.loc[:, 'arrangedate'] = scheduleList['arrangedate'].str.replace(
+        "T00:00:00", "")
+
+    # %%
+
+    prelastSurgeryList = pd.DataFrame(requests.get(
         f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
-            toDay_str}"
-    ).json()
+            prelastSurgeryDate_str}"
+    ).json())
 
-    surgicalList = pd.DataFrame(surgicalListRaw)
+    prelastSurgeryList = prelastSurgeryList[[
+        'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
+    prelastSurgeryList = prelastSurgeryList[prelastSurgeryList['name'] == aName]
+    prelastSurgeryList.loc[:, 'mrn'] = prelastSurgeryList['mrn'].astype(str)
 
-    if not surgicalList.empty:
-        surgicalList = surgicalList[[
-            'mrn', 'pname', 'room', 'cdo', 'operp', 'name']]
-        surgicalList = surgicalList[surgicalList['name'] == aName]
-        surgicalList.loc[:, 'mrn'] = surgicalList['mrn'].astype(str)
+    lastSurgeryList = pd.DataFrame(requests.get(
+        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+            lastSurgeryDate_str}"
+    ).json())
 
-        #  根据bookList 和 surgicalList的 mrn 列合并，要求保留booklist的所有行
-        surgicalCheck = pd.merge(bookList, surgicalList, on='mrn', how='left')
+    lastSurgeryList = lastSurgeryList[[
+        'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
+    lastSurgeryList = lastSurgeryList[lastSurgeryList['name'] == aName]
+    lastSurgeryList.loc[:, 'mrn'] = lastSurgeryList['mrn'].astype(str)
 
-        surgicalCheck = surgicalCheck[['room', 'cdo', 'PatientName', 'mrn', 'PatientSex', 'PatientAge',
-                                       'Isroom', 'Diagnose', 'drremark', 'operp', 'Doctor', 'AppointmentIn', 'AppOperativeDate']]
-        # surgicalCheck 根据 room 和 cdo 升序排序
-        surgicalCheck = surgicalCheck.sort_values(by=['room', 'cdo'])
-        # 并将cdo列改成int格式
-        surgicalCheck.loc[:, 'cdo'] = surgicalCheck['cdo'].astype(
-            str).replace('.0', '', regex=True)
+    upcomingSurgeryList = pd.DataFrame(requests.get(
+        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+            upcomingSurgeryDate_str}"
+    ).json())
 
-        inpatientCheck = pd.merge(pListLeft, surgicalList, on=['mrn', 'pname'], how='left')[
-            ['room', 'cdo', 'bedid', 'pname', 'mrn', 'diag', 'operp']]
-
+    if not upcomingSurgeryList.empty:
+        upcomingSurgeryList = upcomingSurgeryList[[
+            'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
+        upcomingSurgeryList = upcomingSurgeryList[upcomingSurgeryList['name'] == aName]
+        upcomingSurgeryList.loc[:,
+                                'mrn'] = upcomingSurgeryList['mrn'].astype(str)
     else:
-        surgicalCheck = bookList[['PatientName', 'mrn', 'PatientSex',
-                                  'PatientAge', 'Isroom', 'Diagnose', 'drremark', 'Doctor']]
-        inpatientCheck = pListLeft[['bedid', 'pname', 'mrn', 'diag']]
+        upcomingSurgeryList = pd.DataFrame(
+            columns=['mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate'])
 
-    surgicalCheck.to_excel(
-        f"D:\\working-sync\\手术通知\\手术清单-{nextToDay_str}-{aName}.xlsx", index=False)
+    # 叠加 prelastSurgeryList， lastSurgeryList，upcomingSurgeryList
+    surgicalList = pd.concat(
+        [prelastSurgeryList, lastSurgeryList, upcomingSurgeryList])
 
-    return surgicalCheck, inpatientCheck, arrangeListdf, fromDay_str, toDay_str, nextFromDay_str, nextToDay_str
+    surgicalList.loc[:, 'plandate'] = surgicalList['plandate'].str.replace(
+        "T00:00:00", "")
+
+    # %%
+    # 将 arrangeDF 和 surgicalList 根据 mrn 和pname 列合并，要求保留所有行
+    arrangeList = pd.merge(scheduleList, surgicalList,
+                           on=['mrn', 'pname'], how='outer')
+
+    # arrangeList 保留 plandate为 NaN 或者 planDate 为 upcomingSurgeryDate 的行
+    arrangeList = arrangeList[arrangeList['plandate'].isna() |
+                              (arrangeList['plandate'] == upcomingSurgeryDate_str)]
+
+    arrangeList = arrangeList[['room', 'cdo', 'pname', 'mrn', 'Isroom', 'diag',
+                               'drremark', 'operp', 'PatientSex', 'PatientAge', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate', ]]
+
+    # arrangeList 根据 AppOperateiveDate 升序排列
+    arrangeList.sort_values(by='AppOperativeDate', inplace=True)
+
+    # %%
+    arrangeList.to_excel(
+        f"D:\\working-sync\\手术通知\\手术清单-{upcomingSurgeryDate}-{aName}.xlsx", index=False)
+
+    def highlight_upcomingSurgeryDate(row):
+        if pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
+            return ['background-color: yellow']*len(row)
+        else:
+            return ['']*len(row)
+
+    def highlight_nextSurgeryDate(row):
+        if pd.to_datetime(row['AppOperativeDate']).date() == nextSurgeyDate:
+            return ['background-color: lightgreen']*len(row)
+        else:
+            return ['']*len(row)
+
+    columnFixStyle = [
+        {'selector': 'th:nth-child(1),td:nth-child(1)',
+         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: white;'},
+        {'selector': 'th:nth-child(2),td:nth-child(2)',
+         # 调整 left 的值以适应列宽
+         'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: white;'},
+        {'selector': 'th:nth-child(3),td:nth-child(3)',
+         # 调整 left 的值以适应列宽
+         'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: white;'}
+    ]
+
+    arrangeListHtml = arrangeList.style.hide().set_table_styles(
+        columnFixStyle).apply(highlight_upcomingSurgeryDate, axis=1).apply(highlight_nextSurgeryDate, axis=1).to_html()
+
+    return arrangeList, arrangeListHtml
