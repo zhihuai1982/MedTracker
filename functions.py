@@ -1212,18 +1212,51 @@ def surgical_arrange(pList, attending, aName):
         else:
             return ['']*len(row)
 
+    # 将列宽设置为table styles
+    widthStyle = [
+        {'selector': 'th.col_heading.level0.col0',
+         'props': [('width', '40px')]},             # room
+        {'selector': 'th.col_heading.level0.col1',
+         'props': [('width', '40px')]},             # cdo
+        {'selector': 'th.col_heading.level0.col2',
+         'props': [('width', '80px')]},             # pname
+        {'selector': 'th.col_heading.level0.col3',
+         'props': [('width', '80px')]},             # mrn
+        {'selector': 'th.col_heading.level0.col4',
+         'props': [('width', '60px')]},             # Isroom
+        {'selector': 'th.col_heading.level0.col5',
+         'props': [('width', '200px')]},            # diag
+        {'selector': 'th.col_heading.level0.col6',
+         'props': [('width', '200px')]},            # drremark
+        {'selector': 'th.col_heading.level0.col7',
+         'props': [('width', '200px')]},            # operp
+        {'selector': 'th.col_heading.level0.col8',
+         'props': [('width', '50px')]},            # PatientSex
+        {'selector': 'th.col_heading.level0.col9',
+         'props': [('width', '50px')]},            # PatientAge
+        {'selector': 'th.col_heading.level0.col10',
+         'props': [('width', '100px')]},            # AppOperativeDate
+        {'selector': 'th.col_heading.level0.col11',
+         'props': [('width', '100px')]},            # arrangedate
+        {'selector': 'th.col_heading.level0.col12',
+         'props': [('width', '100px')]},            # Doctor
+        {'selector': 'th.col_heading.level0.col13',
+         'props': [('width', '100px')]},            # bedid
+        {'selector': 'th.col_heading.level0.col14',
+         'props': [('width', '100px')]}             # plandate
+    ]
+
+    # 定义固定列的样式
     columnFixStyle = [
-        {'selector': 'th:nth-child(1),td:nth-child(1)',
+        {'selector': 'th:nth-child(1), td:nth-child(1)',
          'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: white;'},
-        {'selector': 'th:nth-child(2),td:nth-child(2)',
-         # 调整 left 的值以适应列宽
+        {'selector': 'th:nth-child(2), td:nth-child(2)',
          'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: white;'},
-        {'selector': 'th:nth-child(3),td:nth-child(3)',
-         # 调整 left 的值以适应列宽
+        {'selector': 'th:nth-child(3), td:nth-child(3)',
          'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: white;'}
     ]
 
-    arrangeListHtml = arrangeList.style.hide().set_table_styles(
-        columnFixStyle).apply(highlight_upcomingSurgeryDate, axis=1).apply(highlight_nextSurgeryDate, axis=1).to_html()
+    arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2000px;"').set_table_styles(
+        widthStyle+columnFixStyle).apply(highlight_upcomingSurgeryDate, axis=1).apply(highlight_nextSurgeryDate, axis=1).to_html()
 
     return arrangeList, arrangeListHtml
