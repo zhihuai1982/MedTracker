@@ -1172,6 +1172,34 @@ def surgical_arrange(pList, attending, aName):
     arrangeList.to_excel(
         f"D:\\working-sync\\手术通知\\手术清单-{upcomingSurgeryDate}-{aName}.xlsx", index=False)
 
+    # 定义文件名
+    file_name = f"D:\\working-sync\\手术通知\\手术清单-{
+        upcomingSurgeryDate}-{aName}.xlsx"
+
+    # 使用 ExcelWriter 和 xlsxwriter 引擎
+    with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
+        arrangeList.to_excel(writer, sheet_name='Sheet1', index=False)
+
+        # 获取 xlsxwriter 对象
+        # workbook = writer.book
+        worksheet = writer.sheets['Sheet1']
+
+        # 设置列宽度
+        worksheet.set_column('A:A', 10)  # room
+        worksheet.set_column('B:B', 10)  # cdo
+        worksheet.set_column('C:C', 30)  # pname
+        worksheet.set_column('D:D', 20)  # mrn
+        worksheet.set_column('E:E', 20)  # Isroom
+        worksheet.set_column('F:F', 100)  # diag
+        worksheet.set_column('G:G', 100)  # drremark
+        worksheet.set_column('H:H', 10)  # Sex
+        worksheet.set_column('I:I', 10)  # Age
+        worksheet.set_column('J:J', 30)  # AppOperativeDate
+        worksheet.set_column('K:K', 30)  # arrangedate
+        worksheet.set_column('L:L', 20)  # Doctor
+        worksheet.set_column('M:M', 30)  # bedid
+        worksheet.set_column('N:N', 30)  # plandate
+
     def highlight_upcomingSurgeryDate(row):
         if pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
             return ['background-color: yellow']*len(row)
