@@ -164,7 +164,8 @@ for index, row in pList.iterrows():
 
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
-arrangeList, arrangeListHtml = surgical_arrange(pList, 30043, "侯铁宁")
+arrangeList, arrangeListHtml, upcomingSurgeryDate_str = surgical_arrange(
+    pList, 30043, "侯铁宁")
 
 pContent += "<div class='table-container'> " + arrangeListHtml + "</div>\n"
 
@@ -175,6 +176,9 @@ rj_df = arrangeList[arrangeList['Isroom'] == '日间'].copy()
 
 # rj_df 删除mrn列与pList的mrn相同的行
 rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
+
+# rj_df 筛选 AppOperativeDate 列内容 与 upcomingSurgeryDate_str 相同的行
+rj_df = rj_df[rj_df['AppOperativeDate'] == upcomingSurgeryDate_str]
 
 # 如果rj_df不为空
 if not rj_df.empty:
@@ -339,7 +343,8 @@ for index, row in pList.iterrows():
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
 
-arrangeList, arrangeListHtml = surgical_arrange(pList, 30259, "肖芒")
+arrangeList, arrangeListHtml, upcomingSurgeryDate_str = surgical_arrange(
+    pList, 30259, "肖芒")
 
 pContent += "<div class='table-container'> " + arrangeListHtml + "</div>\n"
 
@@ -350,6 +355,9 @@ rj_df = arrangeList[arrangeList['Isroom'] == '日间'].copy()
 
 # rj_df 删除mrn列与pList的mrn相同的行
 rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
+
+# rj_df 筛选 AppOperativeDate 列内容 与 upcomingSurgeryDate_str 相同的行
+rj_df = rj_df[rj_df['AppOperativeDate'] == upcomingSurgeryDate_str]
 
 # 如果rj_df不为空
 if not rj_df.empty:

@@ -163,7 +163,7 @@ def get_lab_results(mrn, duration):
                        "葡萄糖", '尿素/肌酐', '丙氨酸氨基转移酶', '天冬氨酸氨基转移酶', '白蛋白', '超敏C反应蛋白', 'D-二聚体(D-Di)']
 
     # 删除df中 bgsj 小于当前日期-duration天 且 xmmc 不在 important_tests 中的行
-    df = df[~(((pd.Timestamp.now() - pd.to_datetime(df['bgsj'])
+    df = df[~(((pd.Timestamp.now() - pd.to_datetime(df['bgsj'], format="mixed")
                 ).dt.days > duration) & (~df['xmmc'].isin(important_tests)))]
 
     def process_group(group):
@@ -1128,7 +1128,7 @@ def surgical_arrange(pList, attending, aName):
 
     # 将surgeryScheduleDF和pList根据mrn列合并
     scheduleList = surgeryScheduleDF.merge(
-        pList, on=['mrn', 'pname', 'diag'], how="outer")
+        pList[['mrn', 'bedid']], on=['mrn'], how="left")
 
     # 删除 schdeuleList 里 dohoscode为 钱塘院区 的行
     scheduleList = scheduleList[scheduleList['dohoscode'] != '钱塘院区']
@@ -1181,13 +1181,14 @@ def surgical_arrange(pList, attending, aName):
     surgicalList = pd.concat(
         [prelastSurgeryList, lastSurgeryList, upcomingSurgeryList])
 
-    surgicalList.loc[:, 'plandate'] = surgicalList['plandate'].str.replace(
-        "T00:00:00", "")
+    # 删除plandate 列 包括“T"后面的所有字符
+    surgicalList.loc[:, 'plandate'] = surgicalList['plandate'].str.split(
+        'T').str[0]
 
     # %%
     # 将 arrangeDF 和 surgicalList 根据 mrn 和pname 列合并，要求保留所有行
     arrangeList = pd.merge(scheduleList, surgicalList,
-                           on=['mrn', 'pname'], how='outer')
+                           on=['mrn', 'pname'], how='left')
 
     # arrangeList 保留 plandate为 NaN 或者 planDate 为 upcomingSurgeryDate 的行
     arrangeList = arrangeList[arrangeList['plandate'].isna() |
@@ -1196,8 +1197,14 @@ def surgical_arrange(pList, attending, aName):
     arrangeList = arrangeList[['room', 'cdo', 'pname', 'mrn', 'Isroom', 'diag',
                                'drremark', 'operp', 'PatientSex', 'PatientAge', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate', ]]
 
-    # arrangeList 根据 AppOperateiveDate 升序排列
-    arrangeList.sort_values(by='AppOperativeDate', inplace=True)
+    # 把arrangelist中的room列和cdo列改为字符串格式，并删除cdo列内容中的 .0
+    arrangeList.loc[:, 'room'] = arrangeList['room'].astype(str)
+    arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].astype(str)
+    arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].str.split('.').str[0]
+
+    # arrangeList 根据 room，cdo，AppOperateiveDate 升序排列
+    arrangeList = arrangeList.sort_values(
+        by=['room', 'cdo', 'AppOperativeDate'], ascending=[True, True, True])
 
     # %%
     arrangeList.to_excel(
@@ -1232,13 +1239,13 @@ def surgical_arrange(pList, attending, aName):
         worksheet.set_column('N:N', 30)  # plandate
 
     def highlight_upcomingSurgeryDate(row):
-        if pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
+        if pd.notnull(row['AppOperativeDate']) and pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
 
     def highlight_nextSurgeryDate(row):
-        if pd.to_datetime(row['AppOperativeDate']).date() == nextSurgeyDate:
+        if pd.notnull(row['AppOperativeDate']) and pd.to_datetime(row['AppOperativeDate']).date() == nextSurgeyDate:
             return ['background-color: lightgreen']*len(row)
         else:
             return ['']*len(row)
@@ -1246,63 +1253,54 @@ def surgical_arrange(pList, attending, aName):
     # 将列宽设置为table styles
     widthStyle = [
         {'selector': 'th.col_heading.level0.col0',
-         'props': [('width', '40px')]},             # room
+            'props': [('width', '40px')]},             # room
         {'selector': 'th.col_heading.level0.col1',
-         'props': [('width', '40px')]},             # cdo
+            'props': [('width', '40px')]},             # cdo
         {'selector': 'th.col_heading.level0.col2',
-         'props': [('width', '80px')]},             # pname
+            'props': [('width', '80px')]},             # pname
         {'selector': 'th.col_heading.level0.col3',
-         'props': [('width', '80px')]},             # mrn
+            'props': [('width', '80px')]},             # mrn
         {'selector': 'th.col_heading.level0.col4',
-         'props': [('width', '60px')]},             # Isroom
+            'props': [('width', '60px')]},             # Isroom
         {'selector': 'th.col_heading.level0.col5',
-         'props': [('width', '200px')]},            # diag
+            'props': [('width', '200px')]},            # diag
         {'selector': 'th.col_heading.level0.col6',
-         'props': [('width', '200px')]},            # drremark
+            'props': [('width', '200px')]},            # drremark
         {'selector': 'th.col_heading.level0.col7',
-         'props': [('width', '200px')]},            # operp
+            'props': [('width', '200px')]},            # operp
         {'selector': 'th.col_heading.level0.col8',
-         'props': [('width', '50px')]},            # PatientSex
+            'props': [('width', '50px')]},            # PatientSex
         {'selector': 'th.col_heading.level0.col9',
-         'props': [('width', '50px')]},            # PatientAge
+            'props': [('width', '50px')]},            # PatientAge
         {'selector': 'th.col_heading.level0.col10',
-         'props': [('width', '100px')]},            # AppOperativeDate
+            'props': [('width', '100px')]},            # AppOperativeDate
         {'selector': 'th.col_heading.level0.col11',
-         'props': [('width', '100px')]},            # arrangedate
+            'props': [('width', '100px')]},            # arrangedate
         {'selector': 'th.col_heading.level0.col12',
-         'props': [('width', '100px')]},            # Doctor
+            'props': [('width', '100px')]},            # Doctor
         {'selector': 'th.col_heading.level0.col13',
-         'props': [('width', '100px')]},            # bedid
+            'props': [('width', '100px')]},            # bedid
         {'selector': 'th.col_heading.level0.col14',
-         'props': [('width', '100px')]}             # plandate
+            'props': [('width', '100px')]}             # plandate
     ]
-
-    # columnFixStyle = [
-    #     {'selector': 'th:nth-child(1), td:nth-child(1)',
-    #      'props': 'position: -webkit-sticky; position: sticky; left:0px; '},
-    #     {'selector': 'th:nth-child(2), td:nth-child(2)',
-    #      'props': 'position: -webkit-sticky; position: sticky; left:50px;'},
-    #     {'selector': 'th:nth-child(3), td:nth-child(3)',
-    #      'props': 'position: -webkit-sticky; position: sticky; left:100px;'}
-    # ]
 
     # 定义固定列的样式
     columnFixStyle = [
         {'selector': 'tr:nth-child(odd) th:nth-child(1), tr:nth-child(odd) td:nth-child(1)',
-         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #f6f6f6;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #f6f6f6;'},
         {'selector': 'tr:nth-child(even) th:nth-child(1), tr:nth-child(even) td:nth-child(1)',
-         'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #ffffff;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #ffffff;'},
         {'selector': 'tr:nth-child(odd) th:nth-child(2), tr:nth-child(odd) td:nth-child(2)',
-         'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #f6f6f6;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #f6f6f6;'},
         {'selector': 'tr:nth-child(even) th:nth-child(2), tr:nth-child(even) td:nth-child(2)',
-         'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #ffffff;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #ffffff;'},
         {'selector': 'tr:nth-child(odd) th:nth-child(3), tr:nth-child(odd) td:nth-child(3)',
-         'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #f6f6f6;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #f6f6f6;'},
         {'selector': 'tr:nth-child(even) th:nth-child(3), tr:nth-child(even) td:nth-child(3)',
-         'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #ffffff;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #ffffff;'},
     ]
 
     arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2000px;"').set_table_styles(
         widthStyle+columnFixStyle).apply(highlight_upcomingSurgeryDate, axis=1).apply(highlight_nextSurgeryDate, axis=1).to_html()
 
-    return arrangeList, arrangeListHtml
+    return arrangeList, arrangeListHtml, upcomingSurgeryDate_str
