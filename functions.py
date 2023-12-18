@@ -10,7 +10,8 @@ import datetime
 wordpress css snippet
 
 table {
-    width: 600px;
+	font-size: 10px;
+    width: 100%;
     table-layout: fixed;
 }
 
@@ -18,42 +19,56 @@ table td {
     word-wrap: break-word;
 }
 
-.table-container table {
-	width: 1500px;
-	table-layout: auto;
-}
-
-.table-container {
-    width: 600px;
+.table_container {
+    width: 100%;
     overflow-x: auto;
 }
 
 .nurse_doc {
-	width: 600px;
+	width: 100%;
 }
 
 .note_link {
 	color: black;
 }
 
+li {
+    padding: 1px 0;
+}
+
+h1 {
+	font-size: 36px;
+}
+
 h2 {
+	font-size: 24px;
     position: sticky;
     top: 0;
     background-color: white;
     z-index: 100000;
-	width: 600px;
+	width: 100%;
 	white-space: nowrap;
     overflow-x: auto;
 
 }
 
+h3 {
+	font-size: 18px;
+}
+
 h4 {
-	width: 600px;
+	font-size: 14px;
 }
 
 form {
-	width: 600px;
+	width: 100%;
+	margin-top: 10px;
 }
+
+a {
+	text-decoration: none !important;
+}
+
 """
 
 """
@@ -156,7 +171,7 @@ def get_lab_results(mrn, duration):
         totalLabRes.extend(labRes)  # 将 labRes 的结果添加到 totalLabRes 列表中
 
     df = pd.DataFrame(totalLabRes)  # 将 totalLabRes 列表转换为 DataFrame
-    df = df[['xmmc', 'jg', 'zdbz', 'ckqj', 'bgsj', 'checkitem']]  # 选择需要的列
+    df = df[['xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj']]  # 选择需要的列
 
     # 创建一个包含重点检验结果名称的列表
     important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐", "肌酸激酶",
@@ -170,11 +185,11 @@ def get_lab_results(mrn, duration):
         if group['zdbz'].replace('', pd.NA).isnull().all():  # 如果 'zdbz' 列都是空白
             return pd.DataFrame([{
                 'xmmc': '',
-                'jg': 'all阴性',
+                'jg': '(-)',
                 'zdbz': '',
-                'ckqj': '',
                 'bgsj': group['bgsj'].iloc[0],
-                'checkitem': group['checkitem'].iloc[0]
+                'checkitem': group['checkitem'].iloc[0],
+                'ckqj': '',
             }])
         else:
             # 删除 'zdbz' 为空白的行
@@ -189,7 +204,7 @@ def get_lab_results(mrn, duration):
         df['bgsj'], format='mixed').dt.strftime('%Y-%m-%d')
 
     df.rename(columns={'xmmc': '项目名称', 'jg': '结果', 'zdbz': 'R',
-              'ckqj': '参考范围', 'bgsj': '检验日期', 'checkitem': '检验项目'}, inplace=True)
+                       'bgsj': '检验日期', 'checkitem': '检验项目', 'ckqj': '参考范围'}, inplace=True)
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
     def highlight_today(row):
@@ -208,17 +223,17 @@ def get_lab_results(mrn, duration):
 
     labStyles = [
         {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '100px')]},
+            'props': [('width', '150px')]},
         {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '80px')]},
+            'props': [('width', '60px')]},
         {'selector': 'th.col_heading.level0.col2',
             'props': [('width', '40px')]},
         {'selector': 'th.col_heading.level0.col3',
-            'props': [('width', '150px')]},
+            'props': [('width', '100px')]},
         {'selector': 'th.col_heading.level0.col4',
             'props': [('width', '120px')]},
         {'selector': 'th.col_heading.level0.col5',
-            'props': [('width', '110px')]}
+            'props': [('width', '150px')]}
     ]
 
     return df.style.set_table_styles(labStyles).hide().apply(highlight_important_tests, axis=1).apply(highlight_today, axis=1).to_html()
@@ -284,11 +299,11 @@ def get_exam_results(mrn, duration):
     # 使用 Styler 类的 set_table_styles 方法设置列宽
     examStyles = [
         {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '100px')]},
+            'props': [('width', '120px')]},
         {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '100px')]},
+            'props': [('width', '80px')]},
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '100px')]},
+            'props': [('width', '150px')]},
         {'selector': 'th.col_heading.level0.col3',
             'props': [('width', '300px')]}
     ]
@@ -503,19 +518,19 @@ def get_order(mrn, series, idList, query):
 
     orderStyles = [
         {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '300px')]},         # 医嘱名称
+            'props': [('width', '200px')]},         # 医嘱名称
         {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '50px')]},          # T
+            'props': [('width', '20px')]},          # T
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '90px')]},          # 剂量
+            'props': [('width', '65px')]},          # 剂量
         {'selector': 'th.col_heading.level0.col3',
-            'props': [('width', '80px')]},          # 频次
+            'props': [('width', '60px')]},          # 频次
         {'selector': 'th.col_heading.level0.col4',
-            'props': [('width', '100px')]},         # 剩余时间
+            'props': [('width', '80px')]},         # 剩余时间
         {'selector': 'th.col_heading.level0.col5',
-            'props': [('width', '300px')]},         # datestart
+            'props': [('width', '200px')]},         # datestart
         {'selector': 'th.col_heading.level0.col6',
-            'props': [('width', '300px')]},         # datestop
+            'props': [('width', '200px')]},         # datestop
     ]
 
     # 定义固定列的样式
@@ -525,9 +540,9 @@ def get_order(mrn, series, idList, query):
         {'selector': 'tr:nth-child(even) th:nth-child(1), tr:nth-child(even) td:nth-child(1)',
          'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #ffffff;'},
         {'selector': 'tr:nth-child(odd) th:nth-child(2), tr:nth-child(odd) td:nth-child(2)',
-         'props': 'position: -webkit-sticky; position: sticky; left:300px; background-color: #f6f6f6;'},
+         'props': 'position: -webkit-sticky; position: sticky; left:200px; background-color: #f6f6f6;'},
         {'selector': 'tr:nth-child(even) th:nth-child(2), tr:nth-child(even) td:nth-child(2)',
-         'props': 'position: -webkit-sticky; position: sticky; left:300px; background-color: #ffffff;'},
+         'props': 'position: -webkit-sticky; position: sticky; left:200px; background-color: #ffffff;'},
     ]
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
@@ -538,7 +553,7 @@ def get_order(mrn, series, idList, query):
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1300px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).to_html()
+    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1000px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).to_html()
 
     # return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
     # return df.style.hide(subset='dateleft', axis=1).hide().apply(highlight_today, axis=1).to_html()
@@ -591,11 +606,11 @@ def surgicalRecord(hDocuList):
     # 使用 Styler 类的 set_table_styles 方法设置列宽
     surgicalStyles = [
         {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '50px')]},
+            'props': [('width', '90px')]},
         {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '150px')]},
+            'props': [('width', '160px')]},
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '150px')]},
+            'props': [('width', '160px')]},
         {'selector': 'th.col_heading.level0.col3',
             'props': [('width', '250px')]}
     ]
@@ -812,7 +827,7 @@ def highcharts(mrn, series):
     glucose_data_str = ', '.join(str(pair) for pair in glucose_data)
 
     temp_glucose_chart = f"""
-    <div id="container{mrn}" style="width: 600px;height:400px;"></div>
+    <div id="container{mrn}" style="width: 100% ;height:400px;"></div>
     <script>
     Highcharts.chart('container{mrn}', {{
         title: {{
@@ -949,7 +964,7 @@ def highcharts(mrn, series):
     draingage_data_str = re.sub(r"'data':", 'data:', draingage_data_str)
 
     draingage_chart = f"""
-    <div id="draingage_container{mrn}" style="width: 600px;height:400px;"></div>
+    <div id="draingage_container{mrn}" style="width: 100%; height:400px;"></div>
     <script>
     var chart = Highcharts.chart('draingage_container{mrn}', {{
         chart: {{
@@ -1041,7 +1056,7 @@ def trello_note(trelloListId, place):
                     cards.forEach(function (card) {{
                         var name = card.name; // 获取每个card对象的name属性值
                         var shortUrl = card.shortUrl;
-                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"' target='_blank'>"+name+ "</a></li><br>"); // 将每个card的name属性显示在页面上
+                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"' target='_blank'>"+name+ "</a></li>"); // 将每个card的name属性显示在页面上
                     }});
                 }} else {{
                     $('#trello-content-1').append("Ajax请求失败")
@@ -1269,11 +1284,11 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col1',
             'props': [('width', '40px')]},             # cdo
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '80px')]},             # pname
+            'props': [('width', '50px')]},             # pname
         {'selector': 'th.col_heading.level0.col3',
-            'props': [('width', '80px')]},             # mrn
+            'props': [('width', '60px')]},             # mrn
         {'selector': 'th.col_heading.level0.col4',
-            'props': [('width', '60px')]},             # Isroom
+            'props': [('width', '40px')]},             # Isroom
         {'selector': 'th.col_heading.level0.col5',
             'props': [('width', '200px')]},            # diag
         {'selector': 'th.col_heading.level0.col6',
@@ -1281,9 +1296,9 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col7',
             'props': [('width', '200px')]},            # operp
         {'selector': 'th.col_heading.level0.col8',
-            'props': [('width', '50px')]},            # PatientSex
+            'props': [('width', '30px')]},            # PatientSex
         {'selector': 'th.col_heading.level0.col9',
-            'props': [('width', '50px')]},            # PatientAge
+            'props': [('width', '30px')]},            # PatientAge
         {'selector': 'th.col_heading.level0.col10',
             'props': [('width', '100px')]},            # AppOperativeDate
         {'selector': 'th.col_heading.level0.col11',
@@ -1303,13 +1318,13 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'tr:nth-child(even) th:nth-child(1), tr:nth-child(even) td:nth-child(1)',
             'props': 'position: -webkit-sticky; position: sticky; left:0px; background-color: #ffffff;'},
         {'selector': 'tr:nth-child(odd) th:nth-child(2), tr:nth-child(odd) td:nth-child(2)',
-            'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #f6f6f6;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:40px; background-color: #f6f6f6;'},
         {'selector': 'tr:nth-child(even) th:nth-child(2), tr:nth-child(even) td:nth-child(2)',
-            'props': 'position: -webkit-sticky; position: sticky; left:50px; background-color: #ffffff;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:40px; background-color: #ffffff;'},
         {'selector': 'tr:nth-child(odd) th:nth-child(3), tr:nth-child(odd) td:nth-child(3)',
-            'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #f6f6f6;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:80px; background-color: #f6f6f6;'},
         {'selector': 'tr:nth-child(even) th:nth-child(3), tr:nth-child(even) td:nth-child(3)',
-            'props': 'position: -webkit-sticky; position: sticky; left:100px; background-color: #ffffff;'},
+            'props': 'position: -webkit-sticky; position: sticky; left:80px; background-color: #ffffff;'},
     ]
 
     arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2000px;"').set_table_styles(
