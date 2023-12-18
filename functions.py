@@ -159,7 +159,7 @@ def get_lab_results(mrn, duration):
     df = df[['xmmc', 'jg', 'zdbz', 'ckqj', 'bgsj', 'checkitem']]  # 选择需要的列
 
     # 创建一个包含重点检验结果名称的列表
-    important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐",
+    important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐", "肌酸激酶",
                        "葡萄糖", '尿素/肌酐', '丙氨酸氨基转移酶', '天冬氨酸氨基转移酶', '白蛋白', '超敏C反应蛋白', 'D-二聚体(D-Di)']
 
     # 删除df中 bgsj 小于当前日期-duration天 且 xmmc 不在 important_tests 中的行
@@ -185,7 +185,8 @@ def get_lab_results(mrn, duration):
     # 将df按照bgsj由大到小逆向排序
     df = df.sort_values(by='bgsj', ascending=False)
     # 将bgsj转换成日期格式
-    df['bgsj'] = pd.to_datetime(df['bgsj']).dt.strftime('%Y-%m-%d')
+    df['bgsj'] = pd.to_datetime(
+        df['bgsj'], format='mixed').dt.strftime('%Y-%m-%d')
 
     df.rename(columns={'xmmc': '项目名称', 'jg': '结果', 'zdbz': 'R',
               'ckqj': '参考范围', 'bgsj': '检验日期', 'checkitem': '检验项目'}, inplace=True)
@@ -383,9 +384,14 @@ def get_order(mrn, series, idList, query):
     # 比如将 “ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查”替换为“生化全套”
     orderItemDict = {
         "GGT/MG/同型半胱氨酸/生化筛查常规检查/视黄醇结合蛋白/TBA(空腹)/血清胱抑素(Cystatin C)测定/β-羟丁酸/游离脂肪酸/Ca/AST/血清淀粉样蛋白/超敏C反应蛋白(hsCRP)/LP(a)/LDL/ADA:血清/ALP/PHO": "生化全套",
+        "γ-谷氨酰基转移酶(GGT)/镁(Mg)/同型半胱氨酸(Hcy)/生化筛查常规{TP,Alb,ALT,T-Bil,D-Bil,I-Bil,Urea,Cr,UA,K,Na,Cl,TC,TG,HDL-C,Glu}/视黄醇结合蛋白(RBP)/总胆汁酸(TB": "生化全套",
+        "纤维蛋白原/活化部分凝血活酶时间(APTT)/凝血酶原时间(PT)/D-二聚体(D-Dimer)": "凝血功能全套",
         "纤维蛋白原(FG)/部分凝血活酶时间(APTT)/凝血酶原时间(PT)/D-Di(仅限入院筛查)": "凝血功能全套",
+        "抗梅毒螺旋体抗体(TPAb)[ELISA]/乙型肝炎病毒核心抗体IgM(HBcAbIgM)/乙型肝炎病毒外膜蛋白前S1抗原(Pre-S1Ag)/乙肝三系{HBsAg,HBsAb,HBeAg,HBeAb,HBcAb IgM,HBcAb IgG}/人免疫": "术前免疫",
         "梅毒筛选/AHBCIgM/前S抗原/乙肝三系检查/HIVAb/HCVAb": "术前免疫",
+        "甲状腺功能常规{TSH,T3,T4,FT3,FT4}/抗甲状腺过氧化物酶抗体(TPOAb)/抗甲状腺球蛋白抗体(TGAb)": "甲状腺功能",
         "HBsAg快,HCVAb快,HIVAgAb,梅毒快,TRUST,梅毒TPPA": "日间免疫",
+        "RhD血型[输血]/ABO血型[输血]/血常规(CBC)": "血常规血型",
         "ABScreen,Rh表型CcEe": "血型"}
     # 利用字典替换checkitem列的内容
     df['drname'] = df['drname'].replace(orderItemDict)
@@ -404,6 +410,8 @@ def get_order(mrn, series, idList, query):
         '头孢哌酮舒巴坦针 1.5gX1',
         '亚胺培南西司他丁针 0.5/0.5gX1',
         '[北京]左氧氟沙星针 0.5g:100mlX1',
+        '[进口]利奈唑胺葡萄糖针 0.6g:300mlX1',
+        '[罗氏芬]头孢曲松针 1gX1'
     ]
 
     # workflow
@@ -713,6 +721,10 @@ def medicalHistory(hDocuList):
     tables = pd.read_html(StringIO(response.text))
 
     medicalHistory = tables[3].iloc[1, 0]
+
+    # 判断medicalHistory是否为str，如果不是就赋值“”
+    if not isinstance(medicalHistory, str):
+        medicalHistory = ""
 
     # 使用正则表达式分割字符串
     parts = re.split(r'(\d+、)', medicalHistory)
@@ -1223,20 +1235,20 @@ def surgical_arrange(pList, attending, aName):
         worksheet = writer.sheets['Sheet1']
 
         # 设置列宽度
-        worksheet.set_column('A:A', 10)  # room
-        worksheet.set_column('B:B', 10)  # cdo
-        worksheet.set_column('C:C', 30)  # pname
-        worksheet.set_column('D:D', 20)  # mrn
-        worksheet.set_column('E:E', 20)  # Isroom
-        worksheet.set_column('F:F', 100)  # diag
-        worksheet.set_column('G:G', 100)  # drremark
-        worksheet.set_column('H:H', 10)  # Sex
-        worksheet.set_column('I:I', 10)  # Age
-        worksheet.set_column('J:J', 30)  # AppOperativeDate
-        worksheet.set_column('K:K', 30)  # arrangedate
-        worksheet.set_column('L:L', 20)  # Doctor
-        worksheet.set_column('M:M', 30)  # bedid
-        worksheet.set_column('N:N', 30)  # plandate
+        worksheet.set_column('A:A', 5)  # room
+        worksheet.set_column('B:B', 5)  # cdo
+        worksheet.set_column('C:C', 10)  # pname
+        worksheet.set_column('D:D', 10)  # mrn
+        worksheet.set_column('E:E', 10)  # Isroom
+        worksheet.set_column('F:F', 50)  # diag
+        worksheet.set_column('G:G', 50)  # drremark
+        worksheet.set_column('H:H', 5)  # Sex
+        worksheet.set_column('I:I', 5)  # Age
+        worksheet.set_column('J:J', 10)  # AppOperativeDate
+        worksheet.set_column('K:K', 10)  # arrangedate
+        worksheet.set_column('L:L', 10)  # Doctor
+        worksheet.set_column('M:M', 10)  # bedid
+        worksheet.set_column('N:N', 10)  # plandate
 
     def highlight_upcomingSurgeryDate(row):
         if pd.notnull(row['AppOperativeDate']) and pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:

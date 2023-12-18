@@ -69,6 +69,7 @@ pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
 
+# pList = pList.iloc[:3]
 
 # %%
 
@@ -78,8 +79,8 @@ pContent += "<!-- wp:heading {{'level':1} -->\n<div id='hou-notes'><h1 class='wp
 
 for index, row in pList.iterrows():
 
-    print(row['mrn'])
-    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
+    # print(row['mrn'])
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name']}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
     pContent += trello_note(row['id'], "together")
 
@@ -114,7 +115,7 @@ for index, row in pList.iterrows():
     hDocuList = requests.get(
         f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{row['mrn']}/{row['series']}/emr", headers=headers).json()
 
-    pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{
+    pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading' id = '{row['h2name']}'>{
         row['h2name']}</h2>\n<!-- /wp:heading -->\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
@@ -153,8 +154,9 @@ for index, row in pList.iterrows():
     pContent += get_nurse_doc(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
-    pContent += "<div class='table-container'> " + \
-        get_order(row['mrn'], row['series'], row['id'], query)+"</div>\n"
+    pContent += "<div class='table_container'>" + \
+        get_order(row['mrn'], row['series'], row['id'], query) + \
+        "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += medicalHistory(hDocuList)
@@ -167,7 +169,7 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手�
 arrangeList, arrangeListHtml, upcomingSurgeryDate_str = surgical_arrange(
     pList, 30043, "侯铁宁")
 
-pContent += "<div class='table-container'> " + arrangeListHtml + "</div>\n"
+pContent += "<div class='table_container'> " + arrangeListHtml + "</div>\n"
 
 # %%
 
@@ -248,6 +250,8 @@ pList = pList[pList['mrn'] != 9454931]
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
 
+# pList = pList.iloc[:3]
+
 # %%
 
 # pContent = ""
@@ -256,8 +260,8 @@ pContent += "<!-- wp:heading {'level':1} -->\n<div id='xiao-notes'><h1 class='wp
 
 for index, row in pList.iterrows():
 
-    print(row['mrn'])
-    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name'].replace("(", "").replace(")", "")}'>{
+    # print(row['mrn'])
+    pContent += f"<!-- wp:heading -->\n<h4 class='wp-block-heading'><a class='note_link' href='#{row['h2name']}'>{
         row['h2name']}</a></h4>\n<!-- /wp:heading -->\n"
     pContent += trello_note(row['id'], "together")
 
@@ -279,8 +283,6 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>每�
 for index, row in pList.iterrows():
     # 获取病历文书列表
     # http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{mrn}/{series}/emr
-    # 筛选出
-    # "docname": "麻醉前访视单"
 
     print(row['mrn'])
 
@@ -292,7 +294,7 @@ for index, row in pList.iterrows():
     hDocuList = requests.get(
         f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{row['mrn']}/{row['series']}/emr", headers=headers).json()
 
-    pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{
+    pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading' id = '{row['h2name']}'>{
         row['h2name']}</h2>\n<!-- /wp:heading -->\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>备注</a></h3>\n<!-- /wp:heading -->\n"
@@ -331,8 +333,9 @@ for index, row in pList.iterrows():
     pContent += get_nurse_doc(row['mrn'], row['series'])
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
-    pContent += "<div class='table-container'> " + \
-        get_order(row['mrn'], row['series'], row['id'], query)+"</div>\n"
+    pContent += "<div class='table_container'>" + \
+        get_order(row['mrn'], row['series'], row['id'], query) + \
+        "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += medicalHistory(hDocuList)
@@ -346,7 +349,7 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手�
 arrangeList, arrangeListHtml, upcomingSurgeryDate_str = surgical_arrange(
     pList, 30259, "肖芒")
 
-pContent += "<div class='table-container'> " + arrangeListHtml + "</div>\n"
+pContent += "<div class='table_container'> " + arrangeListHtml + "</div>\n"
 
 # %%
 
@@ -383,7 +386,7 @@ if not rj_df.empty:
 # https://robingeuens.com/blog/python-wordpress-api/
 
 user = "zhihuai1982"
-password = "UA5v egrD T2El 9htA c16a SwDA"
+password = "BSNz VB3W InRj LlFr ueKU 1ZSk"
 credentials = user + ':' + password
 token = base64.b64encode(credentials.encode())
 header = {'Authorization': 'Basic ' + token.decode('utf-8')}
