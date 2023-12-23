@@ -1055,8 +1055,27 @@ def trello_note(trelloListId, place):
                     var cards = JSON.parse(response.data);
                     cards.forEach(function (card) {{
                         var name = card.name; // 获取每个card对象的name属性值
+                        var start = card.start;
+
+                        var start_days = "";
+
+                        if (start) {{
+                            var startDate = new Date(start); // 将 start 字符串转换为 Date 对象
+                            startDate.setHours(0, 0, 0, 0); // 将 startDate 的时间设置为午夜
+
+                            var now = new Date(); // 获取当前日期
+                            now.setHours(0, 0, 0, 0); // 将 now 的时间设置为午夜
+
+                            // 计算两个日期的时间戳差值（以毫秒为单位）
+                            var diff = now.getTime() - startDate.getTime();
+
+                            // 将时间戳差值转换为天数
+                            start_days = Math.floor(
+                                diff / (1000 * 60 * 60 * 24)) + "天";
+                        }}
+
                         var shortUrl = card.shortUrl;
-                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"' target='_blank'>"+name+ "</a></li>"); // 将每个card的name属性显示在页面上
+                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"' target='_blank'>"+name + " " + start_days + "</a></li>"); // 将每个card的name属性显示在页面上
                     }});
                 }} else {{
                     $('#trello-content-1').append("Ajax请求失败")
@@ -1215,7 +1234,7 @@ def surgical_arrange(pList, attending, aName):
     # %%
     # 将 arrangeDF 和 surgicalList 根据 mrn 和pname 列合并，要求保留所有行
     arrangeList = pd.merge(scheduleList, surgicalList,
-                           on=['mrn', 'pname'], how='left')
+                           on=['mrn', 'pname'], how='outer')
 
     # arrangeList 保留 plandate为 NaN 或者 planDate 为 upcomingSurgeryDate 的行
     arrangeList = arrangeList[arrangeList['plandate'].isna() |
@@ -1234,8 +1253,8 @@ def surgical_arrange(pList, attending, aName):
         by=['room', 'cdo', 'AppOperativeDate'], ascending=[True, True, True])
 
     # %%
-    arrangeList.to_excel(
-        f"D:\\working-sync\\手术通知\\手术清单-{upcomingSurgeryDate}-{aName}.xlsx", index=False)
+    # arrangeList.to_excel(
+    #     f"D:\\working-sync\\手术通知\\手术清单-{upcomingSurgeryDate}-{aName}.xlsx", index=False)
 
     # 定义文件名
     file_name = f"D:\\working-sync\\手术通知\\手术清单-{

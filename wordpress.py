@@ -69,7 +69,7 @@ pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
 
-# pList = pList.iloc[:2]
+pList = pList.iloc[:2]
 
 # %%
 
@@ -255,7 +255,7 @@ pList = pList[pList['mrn'] != 9454931]
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
 
-# pList = pList.iloc[:2]
+pList = pList.iloc[:2]
 
 # %%
 
@@ -316,39 +316,39 @@ for index, row in pList.iterrows():
         <p class="message"></p>\n
     """
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>生命体征</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>生命体征</a></h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>化验结果</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>化验结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         get_lab_results(row['mrn'], duration) + "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>检查结果</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>检查结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         get_exam_results(row['mrn'], duration) + "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>会诊结果</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>会诊结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         consultation(hDocuList) + "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>既往史</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>既往史</a></h3>\n<!-- /wp:heading -->\n"
 
-    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#hou-notes'>麻醉会诊</a></h4>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>麻醉会诊</a></h4>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         get_preAnesth(hDocuList) + "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#hou-notes'>护理记录</a></h4>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>护理记录</a></h4>\n<!-- /wp:heading -->\n"
     pContent += get_nurse_doc(row['mrn'], row['series'])
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>医嘱</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         get_order(row['mrn'], row['series'], row['id'], query) + \
         "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>首次病程录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += medicalHistory(hDocuList)
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#hou-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>手术记录</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         surgicalRecord(hDocuList) + "</div>\n"
 
