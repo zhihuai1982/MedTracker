@@ -1215,9 +1215,12 @@ def surgical_arrange(pList, attending, aName):
             prelastSurgeryDate_str}"
     ).json())
 
+    surgeons = ['侯铁宁', '肖芒', '姜晓华', '董志怀', '司怡十美']
+
     prelastSurgeryList = prelastSurgeryList[[
         'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
-    prelastSurgeryList = prelastSurgeryList[prelastSurgeryList['name'] == aName]
+    prelastSurgeryList = prelastSurgeryList[prelastSurgeryList['name'].isin(
+        surgeons)]
     prelastSurgeryList.loc[:, 'mrn'] = prelastSurgeryList['mrn'].astype(str)
 
     lastSurgeryList = pd.DataFrame(requests.get(
@@ -1227,7 +1230,7 @@ def surgical_arrange(pList, attending, aName):
 
     lastSurgeryList = lastSurgeryList[[
         'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
-    lastSurgeryList = lastSurgeryList[lastSurgeryList['name'] == aName]
+    lastSurgeryList = lastSurgeryList[lastSurgeryList['name'].isin(surgeons)]
     lastSurgeryList.loc[:, 'mrn'] = lastSurgeryList['mrn'].astype(str)
 
     upcomingSurgeryList = pd.DataFrame(requests.get(
@@ -1238,7 +1241,8 @@ def surgical_arrange(pList, attending, aName):
     if not upcomingSurgeryList.empty:
         upcomingSurgeryList = upcomingSurgeryList[[
             'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
-        upcomingSurgeryList = upcomingSurgeryList[upcomingSurgeryList['name'] == aName]
+        upcomingSurgeryList = upcomingSurgeryList[upcomingSurgeryList['name'].isin(
+            surgeons)]
         upcomingSurgeryList.loc[:,
                                 'mrn'] = upcomingSurgeryList['mrn'].astype(str)
     else:
