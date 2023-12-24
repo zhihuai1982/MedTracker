@@ -1056,8 +1056,15 @@ def trello_note(trelloListId, place):
                     cards.forEach(function (card) {{
                         var name = card.name; // 获取每个card对象的name属性值
                         var start = card.start;
+                        var due = card.due;
+
+                        var color = "";
+                        if (card.labels[0]){{
+                            color = card.labels[0].color;
+                        }}
 
                         var start_days = "";
+                        var due_days = "";
 
                         if (start) {{
                             var startDate = new Date(start); // 将 start 字符串转换为 Date 对象
@@ -1074,8 +1081,23 @@ def trello_note(trelloListId, place):
                                 diff / (1000 * 60 * 60 * 24)) + "天";
                         }}
 
+                        if (due) {{
+                            var dueDate = new Date(due); // 将 due 字符串转换为 Date 对象
+                            dueDate.setHours(0, 0, 0, 0); // 将 dueDate 的时间设置为午夜
+
+                            var now = new Date(); // 获取当前日期
+                            now.setHours(0, 0, 0, 0); // 将 now 的时间设置为午夜
+
+                            // 计算两个日期的时间戳差值（以毫秒为单位）
+                            var diff = dueDate.getTime() - now.getTime();
+
+                            // 将时间戳差值转换为天数
+                            due_days = " | 剩余" + Math.floor(
+                                diff / (1000 * 60 * 60 * 24)) + "天";
+                        }}
+
                         var shortUrl = card.shortUrl;
-                        $('#trello-content-{place}-{trelloListId}').append("<li><a href='"+ shortUrl+"' target='_blank'>"+name + " " + start_days + "</a></li>"); // 将每个card的name属性显示在页面上
+                        $('#trello-content-{place}-{trelloListId}').append("<li style='background-color: light" + color + ";'><a href='"+ shortUrl+"' target='_blank'>"+name + " " + start_days + due_days + "</a></li>"); // 将每个card的name属性显示在页面上
                     }});
                 }} else {{
                     $('#trello-content-1').append("Ajax请求失败")

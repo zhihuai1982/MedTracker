@@ -41,6 +41,7 @@ tpList = [{key: d[key] for key in ['id', 'name']}
           for d in tpListRaw if re.match(pattern, d['name'])]
 for item in tpList:
     item['mrn'] = int(item['name'].split('-')[2])
+    item['tdiag'] = item['name'].split('-')[3]
 
 # %%  住院系统获取患者列表
 
@@ -54,9 +55,9 @@ hpList = [{key: d[key] for key in ['bedid', 'pname', 'mrn', 'series', 'diag', 'a
           for d in hpListRaw]
 
 # hpList 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天
-for item in hpList:
-    item['h2name'] = f"{item['bedid']}-{item['pname']
-                                        }-{item['mrn']}-{item['admdays']}d-{item['diag']}"
+# for item in hpList:
+#     item['h2name'] = f"{item['bedid']}-{item['pname']
+#                                         }-{item['mrn']}-{item['admdays']}d-{item['diag']}"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36"}
@@ -65,6 +66,10 @@ headers = {
 #  根据mrn列合并hpList和tplist，保存到pList，要求保存hpList中的所有行，tplist中的id列
 pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
     tpList), on='mrn', how='left')
+
+# 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天-tdiag
+pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['mrn'].astype(
+    str)+'-'+pList['admdays'].astype(str)+'d-'+'-'+pList['tdiag']
 
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
@@ -224,6 +229,7 @@ tpList = [{key: d[key] for key in ['id', 'name']}
           for d in tpListRaw if re.match(pattern, d['name'])]
 for item in tpList:
     item['mrn'] = int(item['name'].split('-')[2])
+    item['tdiag'] = item['name'].split('-')[3]
 
 # %%  住院系统获取患者列表
 
@@ -236,10 +242,10 @@ hpListRaw = requests.get(
 hpList = [{key: d[key] for key in ['bedid', 'pname', 'mrn', 'series', 'diag', 'admdays']}
           for d in hpListRaw]
 
-# hpList 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天
-for item in hpList:
-    item['h2name'] = f"{item['bedid']}-{item['pname']
-                                        }-{item['mrn']}-{item['admdays']}d-{item['diag']}"
+# # hpList 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天
+# for item in hpList:
+#     item['h2name'] = f"{item['bedid']}-{item['pname']
+#                                         }-{item['mrn']}-{item['admdays']}d-{item['diag']}"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36"}
@@ -249,8 +255,9 @@ headers = {
 pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
     tpList), on='mrn', how='left')
 
-# 删除pList中mrn列为“9454931”的行
-pList = pList[pList['mrn'] != 9454931]
+# 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天-tdiag
+pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['mrn'].astype(
+    str)+'-'+pList['admdays'].astype(str)+'d-'+'-'+pList['tdiag']
 
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
