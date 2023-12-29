@@ -383,7 +383,7 @@ def get_order(mrn, series, idList, query):
     # 保留datestop大于当前时间的行
     # 保留orderflag1 不为 NSC 的行
     df = pd.DataFrame(response)[
-        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'datestart', 'mark']]
+        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'datestart', 'dr', 'mark']]
     df = df[df['mark'] != '护理评估智能决策']
     df = df[df['orderflag1'] != 'NSC']
     # convert datestop column to timestamp object
@@ -510,7 +510,7 @@ def get_order(mrn, series, idList, query):
         lambda x: f"{x.days}d {x.seconds // 3600}h")
 
     df = df[['drname', 'ordertype', 'dosage',
-             'frequency', 'dateleft', 'dateleft_dh', 'datestart', 'datestop']]
+             'frequency', 'dateleft', 'dateleft_dh', 'datestart', 'datestop', 'mark', 'dr']]
     df.rename(columns={'drname': '医嘱名称', 'ordertype': 'T',
               'dosage': '剂量', 'frequency': '频次', 'dateleft_dh': '剩余时间'}, inplace=True)
 
@@ -531,6 +531,10 @@ def get_order(mrn, series, idList, query):
             'props': [('width', '200px')]},         # datestart
         {'selector': 'th.col_heading.level0.col6',
             'props': [('width', '200px')]},         # datestop
+        {'selector': 'th.col_heading.level0.col7',
+            'props': [('width', '200px')]},         # mark
+        {'selector': 'th.col_heading.level0.col8',
+            'props': [('width', '100px')]},         # dr
     ]
 
     # 定义固定列的样式
@@ -546,18 +550,19 @@ def get_order(mrn, series, idList, query):
     ]
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
-
     def highlight_today(row):
-        if (row['dateleft'] < pd.Timedelta(hours=12)) & (row['T'] == "R"):
+        if row is not None and (row['dateleft'] < pd.Timedelta(hours=12)) and (row['T'] == "R"):
             return ['background-color: yellow']*len(row)
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1000px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).to_html()
+    def selfpaid_medication(row):
+        if row['mark'] is not None and '自费' in row['mark']:
+            return ['color: purple']*len(row)
+        else:
+            return ['']*len(row)
 
-    # return df.style.hide(subset='dateleft', axis=1).hide().set_table_styles(orderStyles).apply(highlight_today, axis=1).to_html()
-    # return df.style.hide(subset='dateleft', axis=1).hide().apply(highlight_today, axis=1).to_html()
-    # return df.to_html()
+    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1500px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).apply(selfpaid_medication, axis=1).to_html()
 
 # %%
 # 手术记录
@@ -1241,8 +1246,7 @@ def surgical_arrange(pList, attending, aName):
     if not upcomingSurgeryList.empty:
         upcomingSurgeryList = upcomingSurgeryList[[
             'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
-        upcomingSurgeryList = upcomingSurgeryList[upcomingSurgeryList['name'].isin(
-            surgeons)]
+        upcomingSurgeryList = upcomingSurgeryList[upcomingSurgeryList['name'] == aName]
         upcomingSurgeryList.loc[:,
                                 'mrn'] = upcomingSurgeryList['mrn'].astype(str)
     else:
