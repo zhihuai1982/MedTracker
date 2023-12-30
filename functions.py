@@ -552,7 +552,7 @@ def get_order(mrn, series, idList, query):
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset=['selfpaid'], axis=1).hide().set_table_attributes('style="width:1500px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).apply(selfpaid_medication, axis=1).to_html()
+    return df.style.hide(subset=['dateleft', 'selfpaid'], axis=1).hide().set_table_attributes('style="width:1500px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).apply(selfpaid_medication, axis=1).to_html()
 
 # %%
 # 手术记录
@@ -1268,17 +1268,113 @@ def surgical_arrange(pList, attending, aName):
     arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].astype(str)
     arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].str.split('.').str[0]
 
-    # arrangeList 根据 room，cdo，AppOperateiveDate 升序排列
-    arrangeList = arrangeList.sort_values(
-        by=['room', 'cdo', 'AppOperativeDate'], ascending=[True, True, True])
+    # %%
+    # 手术安排查询
+    url = "http://20.21.1.224:5537/hospital/MEDICALADVICEService/getOperList"
 
-    # 替换 arrangeList 的 room 和 cdo 列的空值为空格
-    arrangeList.loc[:, 'room'] = arrangeList['room'].fillna('')
-    arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].fillna('')
+    payload = {
+        "serviceFunCode": "00000585",
+        "serviceParam": {
+            "DOFLAG": "0",
+            "STARTDATE": f"{datetime.date.today()} 00:00:00",
+            "ENDDATE": f"{datetime.date.today() + datetime.timedelta(days=7)} 23:59:59",
+            "opdept": "",
+            "dohoscode": "",
+            "DEPTID": "33"
+        },
+        "logInfo": {
+            "stay": None,
+            "loginHosCodeNm": "庆春院区",
+            "loginHospitalNm": "浙江大学医学院附属邵逸夫医院",
+            "loginUserId": "73298",
+            "loginUserNm": "董志怀",
+            "loginHosCode": "A001",
+            "loginDeptId": "33",
+            "loginDeptNm": "耳鼻咽喉头颈外科",
+            "loginPassword": "0",
+            "loginDpower": None,
+            "loginNpower": None,
+            "loginStay": "I",
+            "loginSysId": "14",
+            "loginSysNm": "住院医生系统",
+            "title": "3",
+            "zc": None,
+            "loginBaseFlag": None,
+            "loginBaseZyFlag": None,
+            "loginSpecial": None,
+            "loginDoMain": "F",
+            "loginIp": None,
+            "loginCa": "330623198212060014",
+            "ysqx": False,
+            "attending": None,
+            "ssoToken": "YVF3SC80RFN0TFpBWHJBSlB6NFA3bGlkd2txVVQxem4wcGttMU9UOUhpK2NDbVNxN1dTZ2tIR0txWlYxcUw4dXR1ZVBmZ1pUUDJ6Z09WbnR4czU2RjZ1RXRMWGdHYkVVenY3S05UbmtCQW9iWnNhTXREUnNUd2ZMZ3pNaUJIYWhhYklqZFQ4S3hzWU11T1ZKUHpUbDUzVlN1OHZCTVpnd2pnSzA1RVlaM1EwPQ==",
+            "caflag": False,
+            "castatus": "-1",
+            "caAuthTime": 1,
+            "caAuthKEY": "774a3615d9894be1b7fdd130143e0af5",
+            "caGetAccessToken": "87e4e926ec644f33976fbe89ecd96730_13",
+            "domain": "F",
+            "drId": None,
+            "loginClincRoom": None,
+            "loginClassId": None,
+            "loginCallQid": None,
+            "loginCallDate": None,
+            "cardId": "330623198212060014",
+            "loginempnetphone": "664628",
+            "loginempnetphonE2": None,
+            "ip": None,
+            "computerName": None,
+            "doctorDept": None,
+            "loginBrlx": "",
+            "loginMedGroup": "30259",
+            "isHemodialysis": False,
+            "deptHemodialysis": "30",
+            "isAttending": False,
+            "isDirector": False,
+            "flagantiEmp": "2",
+            "gjbm": "D330104050866",
+            "DrId": ""
+        }
+    }
+
+    headers = {
+        'Connection': 'keep-alive',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,ru;q=0.7,zh-TW;q=0.6',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiNzMyOTgiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9naXZlbm5hbWUiOiLokaPlv5fmgIAiLCJubiI6IkEwMDEiLCJpZCI6IjczMjk4IiwianRpIjoiRiAgIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9leHBpcmF0aW9uIjoiMTIvMjkvMjAyMyAwMToxOToyNyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkYgICIsIm5iZiI6MTcwMzc3MzE2NywiZXhwIjoxNzAzNzgzOTY3LCJpc3MiOiJFbXJzV2ViLkFwaSIsImF1ZCI6IndyIn0.EEPOpH_gh0cJFkSPjNKKKATMXVG8Hw6R48fSevgkX64',
+        'Host': '20.21.1.224:5537',
+        'Origin': 'http://20.21.1.224:5537',
+        'Referer': 'http://20.21.1.224:5537/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request(
+        "POST", url, headers=headers, data=json.dumps(payload)).json()['resultJson']
+
+    preArrangedf = pd.DataFrame(response)
+
+    preArrangedf = preArrangedf[['mrn', 'pname',
+                                'preoperp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate']]
+
+    # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
+    preArrangedf.loc[:, 'askdate'] = preArrangedf['askdate'].str.replace(
+        '/', '-').str.split(' ').str[0]
+
+    # 合并 arrangeList 和 preArrangedf，保存到 arrangeList
+    arrangeList = arrangeList.merge(
+        preArrangedf, on=['mrn', 'pname'], how='left')
 
     # %%
-    # arrangeList.to_excel(
-    #     f"D:\\working-sync\\手术通知\\手术清单-{upcomingSurgeryDate}-{aName}.xlsx", index=False)
+    # arrangeList 根据 room，cdo，AppOperateiveDate 升序排列
+    arrangeList = arrangeList.sort_values(
+        by=['room', 'cdo', 'AppOperativeDate', 'remark', 'cdonm'], ascending=[True, True, True, True, True])
+
+    # arrangeList 的 room 和 cdo 列的类型是str，把它们的“nan”替换为空格
+    arrangeList.loc[:, 'room'] = arrangeList['room'].str.replace('nan', '')
+    arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].str.replace('nan', '')
+
+    # %%
 
     # 定义文件名
     file_name = f"D:\\working-sync\\手术通知\\手术清单-{
@@ -1291,6 +1387,8 @@ def surgical_arrange(pList, attending, aName):
         # 获取 xlsxwriter 对象
         workbook = writer.book
         worksheet = writer.sheets['Sheet1']
+        # 锁定前两列
+        worksheet.freeze_panes(0, 7)
 
         # 创建一个格式对象
         format1 = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
@@ -1302,7 +1400,7 @@ def surgical_arrange(pList, attending, aName):
         worksheet.set_column('C:C', 10, format1)  # pname
         worksheet.set_column('D:D', 10, format1)  # mrn
         worksheet.set_column('E:E', 5, format1)  # Isroom
-        worksheet.set_column('F:F', 50, format2)  # diag
+        worksheet.set_column('F:F', 20, format2)  # diag
         worksheet.set_column('G:G', 50, format2)  # drremark
         worksheet.set_column('H:H', 50, format2)   # operp
         worksheet.set_column('I:I', 5, format1)   # Sex
@@ -1312,6 +1410,12 @@ def surgical_arrange(pList, attending, aName):
         worksheet.set_column('M:M', 10, format1)  # Doctor
         worksheet.set_column('N:N', 10, format1)  # bedid
         worksheet.set_column('O:O', 10, format1)  # plandate
+        worksheet.set_column('P:P', 50, format1)  # preoperp
+        worksheet.set_column('Q:Q', 20, format2)  # remark
+        worksheet.set_column('R:R', 10, format1)  # cdonm
+        worksheet.set_column('S:S', 10, format1)  # aneask
+        worksheet.set_column('T:T', 10, format1)  # agentnm
+        worksheet.set_column('U:U', 10, format1)  # askdate
 
     def highlight_upcomingSurgeryDate(row):
         if pd.notnull(row['AppOperativeDate']) and pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
@@ -1356,7 +1460,19 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col13',
             'props': [('width', '100px')]},            # bedid
         {'selector': 'th.col_heading.level0.col14',
-            'props': [('width', '100px')]}             # plandate
+            'props': [('width', '100px')]},             # plandate
+        {'selector': 'th.col_heading.level0.col15',
+            'props': [('width', '200px')]},             # preprop
+        {'selector': 'th.col_heading.level0.col16',
+            'props': [('width', '200px')]},             # remark
+        {'selector': 'th.col_heading.level0.col17',
+            'props': [('width', '40px')]},             # cdonm
+        {'selector': 'th.col_heading.level0.col18',
+            'props': [('width', '60px')]},             # aneask
+        {'selector': 'th.col_heading.level0.col19',
+            'props': [('width', '60px')]},             # agentnm
+        {'selector': 'th.col_heading.level0.col20',
+            'props': [('width', '100px')]}             # askdate
     ]
 
     # 定义固定列的样式
@@ -1375,7 +1491,7 @@ def surgical_arrange(pList, attending, aName):
             'props': 'position: -webkit-sticky; position: sticky; left:80px; background-color: #ffffff;'},
     ]
 
-    arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2000px;"').set_table_styles(
+    arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2500px;"').set_table_styles(
         widthStyle+columnFixStyle).apply(highlight_upcomingSurgeryDate, axis=1).apply(highlight_nextSurgeryDate, axis=1).to_html()
 
     return arrangeList, arrangeListHtml, upcomingSurgeryDate_str
@@ -1471,16 +1587,17 @@ def inout(mrn, series):
         return ""
 
     # 将 response 转换为 DataFrame 并取前三列
-
     inout_df = pd.DataFrame(response).iloc[:, :3]
+    # 替换 表格中的 None 为空
+    inout_df = inout_df.replace('None', '')
 
     inoutStyles = [
         {'selector': 'th.col_heading.level0.col0',
-            'props': [('width', '200px')]},         # 时间
+            'props': [('width', '130px')]},         # 时间
         {'selector': 'th.col_heading.level0.col1',
-            'props': [('width', '150px')]},          # 出量
+            'props': [('width', '120px')]},          # 出量
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '150px')]},          # 入量
+            'props': [('width', '120px')]},          # 入量
     ]
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期

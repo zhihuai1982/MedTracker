@@ -68,13 +68,13 @@ pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
     tpList), on='mrn', how='left')
 
 # 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天-tdiag
-pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['mrn'].astype(
-    str)+'-'+pList['admdays'].astype(str)+'d-'+'-'+pList['tdiag']
+pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['admdays'].astype(str)+'d-'+pList['tdiag'] + "-" + pList['mrn'].astype(
+    str)
 
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
 
-pList = pList.iloc[:2]
+# pList = pList.iloc[:1]
 
 # %%
 
@@ -256,13 +256,13 @@ pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(
     tpList), on='mrn', how='left')
 
 # 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天-tdiag
-pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['mrn'].astype(
-    str)+'-'+pList['admdays'].astype(str)+'d-'+'-'+pList['tdiag']
+pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['admdays'].astype(str)+'d-'+pList['tdiag'] + "-" + pList['mrn'].astype(
+    str)
 
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
 
-pList = pList.iloc[:2]
+# pList = pList.iloc[:1]
 
 # %%
 
@@ -326,6 +326,10 @@ for index, row in pList.iterrows():
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>生命体征</a></h3>\n<!-- /wp:heading -->\n"
     pContent += highcharts(row['mrn'], row['series'])
 
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>48h出入量</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<div class='table_container'>" + \
+        inout(row['mrn'], row['series']) + "</div>\n"
+
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>化验结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         get_lab_results(row['mrn'], duration) + "</div>\n"
@@ -370,34 +374,34 @@ pContent += "<div class='table_container'> " + arrangeListHtml + "</div>\n"
 # %%
 
 # 筛选出rj_df里 Isroom为“日间“的列
-rj_df = arrangeList[arrangeList['Isroom'] == '日间'].copy()
+# rj_df = arrangeList[arrangeList['Isroom'] == '日间'].copy()
 
-# rj_df 删除mrn列与pList的mrn相同的行
-rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
+# # rj_df 删除mrn列与pList的mrn相同的行
+# rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
 
-# rj_df 筛选 AppOperativeDate 列内容 与 upcomingSurgeryDate_str 相同的行
-rj_df = rj_df[rj_df['AppOperativeDate'] == upcomingSurgeryDate_str]
+# # rj_df 筛选 AppOperativeDate 列内容 与 upcomingSurgeryDate_str 相同的行
+# rj_df = rj_df[rj_df['AppOperativeDate'] == upcomingSurgeryDate_str]
 
-# 如果rj_df不为空
-if not rj_df.empty:
-    # 新建 pBrief 列，格式为 PatientName+mrn+Diagnose
-    rj_df.loc[:, 'pBrief'] = rj_df['pname'].str.cat(
-        rj_df[['mrn', 'diag']].astype(str), sep='+')
+# # 如果rj_df不为空
+# if not rj_df.empty:
+#     # 新建 pBrief 列，格式为 PatientName+mrn+Diagnose
+#     rj_df.loc[:, 'pBrief'] = rj_df['pname'].str.cat(
+#         rj_df[['mrn', 'diag']].astype(str), sep='+')
 
-    pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>日间手术</h1>\n<!-- /wp:heading -->\n"
+#     pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>日间手术</h1>\n<!-- /wp:heading -->\n"
 
-    for index, row in rj_df.iterrows():
+#     for index, row in rj_df.iterrows():
 
-        pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{
-            row['pBrief']}</h2>\n<!-- /wp:heading -->\n"
+#         pContent += f"<!-- wp:heading -->\n<h2 class='wp-block-heading'>{
+#             row['pBrief']}</h2>\n<!-- /wp:heading -->\n"
 
-        pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
-        pContent += "<div class='table_container'>" + \
-            get_lab_results(row['mrn'], 30) + "</div>\n"
+#         pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>化验结果</h3>\n<!-- /wp:heading -->\n"
+#         pContent += "<div class='table_container'>" + \
+#             get_lab_results(row['mrn'], 30) + "</div>\n"
 
-        pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
-        pContent += "<div class='table_container'>" + \
-            get_exam_results(row['mrn'], 30) + "</div>\n"
+#         pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'>检查结果</h3>\n<!-- /wp:heading -->\n"
+#         pContent += "<div class='table_container'>" + \
+#             get_exam_results(row['mrn'], 30) + "</div>\n"
 
 
 # %%
