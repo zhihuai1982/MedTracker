@@ -4,6 +4,7 @@ import pandas as pd
 from io import StringIO
 import dateutil.relativedelta as rd
 import datetime
+import json
 
 
 """
@@ -401,10 +402,12 @@ def get_order(mrn, series, idList, query):
     orderItemDict = {
         "GGT/MG/同型半胱氨酸/生化筛查常规检查/视黄醇结合蛋白/TBA(空腹)/血清胱抑素(Cystatin C)测定/β-羟丁酸/游离脂肪酸/Ca/AST/血清淀粉样蛋白/超敏C反应蛋白(hsCRP)/LP(a)/LDL/ADA:血清/ALP/PHO": "生化全套",
         "γ-谷氨酰基转移酶(GGT)/镁(Mg)/同型半胱氨酸(Hcy)/生化筛查常规{TP,Alb,ALT,T-Bil,D-Bil,I-Bil,Urea,Cr,UA,K,Na,Cl,TC,TG,HDL-C,Glu}/视黄醇结合蛋白(RBP)/总胆汁酸(TB": "生化全套",
+        "γ-谷氨酰基转移酶(GGT)/镁(Mg)/同型半胱氨酸(Hcy)/生化筛查常规{TP,Alb,ALT,T-Bil,D-Bil,I-Bil,Urea,Cr,UA,K,Na,Cl,TC,TG,HDL-C,Glu}/视黄醇结合蛋白(RBP)/总胆汁酸(TBA)/胱抑素(Cys-C)/β-羟基丁酸(β-HB)/游离脂肪酸(FFA": "生化全套",
         "纤维蛋白原/活化部分凝血活酶时间(APTT)/凝血酶原时间(PT)/D-二聚体(D-Dimer)": "凝血功能全套",
         "纤维蛋白原(FG)/部分凝血活酶时间(APTT)/凝血酶原时间(PT)/D-Di(仅限入院筛查)": "凝血功能全套",
         "抗梅毒螺旋体抗体(TPAb)[ELISA]/乙型肝炎病毒核心抗体IgM(HBcAbIgM)/乙型肝炎病毒外膜蛋白前S1抗原(Pre-S1Ag)/乙肝三系{HBsAg,HBsAb,HBeAg,HBeAb,HBcAb IgM,HBcAb IgG}/人免疫": "术前免疫",
         "梅毒筛选/AHBCIgM/前S抗原/乙肝三系检查/HIVAb/HCVAb": "术前免疫",
+        "抗梅毒螺旋体抗体(TPAb)[ELISA]/乙型肝炎病毒核心抗体IgM(HBcAbIgM)/乙型肝炎病毒外膜蛋白前S1抗原(Pre-S1Ag)/乙肝三系{HBsAg,HBsAb,HBeAg,HBeAb,HBcAb IgM,HBcAb IgG}/人免疫缺陷病毒抗体(HIVAb)/丙型肝炎病毒抗": "术前免疫",
         "甲状腺功能常规{TSH,T3,T4,FT3,FT4}/抗甲状腺过氧化物酶抗体(TPOAb)/抗甲状腺球蛋白抗体(TGAb)": "甲状腺功能",
         "HBsAg快,HCVAb快,HIVAgAb,梅毒快,TRUST,梅毒TPPA": "日间免疫",
         "RhD血型[输血]/ABO血型[输血]/血常规(CBC)": "血常规血型",
@@ -1376,3 +1379,115 @@ def surgical_arrange(pList, attending, aName):
         widthStyle+columnFixStyle).apply(highlight_upcomingSurgeryDate, axis=1).apply(highlight_nextSurgeryDate, axis=1).to_html()
 
     return arrangeList, arrangeListHtml, upcomingSurgeryDate_str
+
+# %%
+# 48h 出入量
+
+
+def inout(mrn, series):
+
+    url = "http://20.21.1.224:5537/hospital/NursingAssessmentService/GetInoutList"
+
+    payload = {
+        "serviceFunCode": "00000651",
+        "serviceParam": {
+            "type": "0",
+            "mrn": mrn,
+            "series": series,
+            "startdate": f"{datetime.date.today() - datetime.timedelta(days=2)} 06:00:00",
+            "enddate": f"{datetime.date.today()} 06:00:00"
+        },
+        "logInfo": {
+            "stay": None,
+            "loginHosCodeNm": "庆春院区",
+            "loginHospitalNm": "浙江大学医学院附属邵逸夫医院",
+            "loginUserId": "73298",
+            "loginUserNm": "董志怀",
+            "loginHosCode": "A001",
+            "loginDeptId": "33",
+            "loginDeptNm": "耳鼻咽喉头颈外科",
+            "loginPassword": "0",
+            "loginDpower": None,
+            "loginNpower": None,
+            "loginStay": "I",
+            "loginSysId": "14",
+            "loginSysNm": "住院医生系统",
+            "title": "3",
+            "zc": None,
+            "loginBaseFlag": None,
+            "loginBaseZyFlag": None,
+            "loginSpecial": None,
+            "loginDoMain": "F",
+            "loginIp": None,
+            "loginCa": "330623198212060014",
+            "ysqx": False,
+            "attending": None,
+            "ssoToken": "a21Nd2xjekFVcWJ5RkpPeWtwRzQreC9zMTVUWWpOclAzWkZnSXIwbTROSDRya1MzWlRHVWt6OC9YQStjZU4zcDdJSXJvRnArMElnYzUyYlNrUlpJRVJud2FqYzd5anMxVzdsM2dobFhzd3ZQREw2ZW1Udi81UU5NSmd0d1dlaU5YWC9XelpKZDBEZFpreHF4dk1iN2pYYklxcTBnQUJYYW04aEJvTUZ1ZG5NPQ==",
+            "caflag": False,
+            "castatus": "-1",
+            "caAuthTime": 1,
+            "caAuthKEY": "a7ac4ffb370249bbb40dbda1070ff515",
+            "caGetAccessToken": "87e4e926ec644f33976fbe89ecd96730_13",
+            "domain": "F",
+            "drId": None,
+            "loginClincRoom": None,
+            "loginClassId": None,
+            "loginCallQid": None,
+            "loginCallDate": None,
+            "cardId": "330623198212060014",
+            "loginempnetphone": "664628",
+            "loginempnetphonE2": None,
+            "ip": None,
+            "computerName": None,
+            "doctorDept": None,
+            "loginBrlx": "",
+            "loginMedGroup": "30259",
+            "isHemodialysis": False,
+            "deptHemodialysis": "30",
+            "isAttending": False,
+            "isDirector": False,
+            "flagantiEmp": "2",
+            "gjbm": "D330104050866",
+            "DrId": ""
+        }
+    }
+
+    headers = {
+        'Connection': 'keep-alive',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,ru;q=0.7,zh-TW;q=0.6',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiNzMyOTgiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9naXZlbm5hbWUiOiLokaPlv5fmgIAiLCJubiI6IkEwMDEiLCJpZCI6IjczMjk4IiwianRpIjoiRiAgIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9leHBpcmF0aW9uIjoiMTIvMjkvMjAyMyAwMToxOToyNyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkYgICIsIm5iZiI6MTcwMzc3MzE2NywiZXhwIjoxNzAzNzgzOTY3LCJpc3MiOiJFbXJzV2ViLkFwaSIsImF1ZCI6IndyIn0.EEPOpH_gh0cJFkSPjNKKKATMXVG8Hw6R48fSevgkX64',
+        'Host': '20.21.1.224:5537',
+        'Origin': 'http://20.21.1.224:5537',
+        'Referer': 'http://20.21.1.224:5537/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request(
+        "POST", url, headers=headers, data=json.dumps(payload)).json()['resultJson']
+
+    if response == None:
+        return ""
+
+    # 将 response 转换为 DataFrame 并取前三列
+
+    inout_df = pd.DataFrame(response).iloc[:, :3]
+
+    inoutStyles = [
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '200px')]},         # 时间
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '150px')]},          # 出量
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '150px')]},          # 入量
+    ]
+
+    # 定义一个函数，该函数会检查一个日期是否是今天的日期
+    def highlight_totalinout(row):
+        if "小时" in row['rcdtime']:
+            return ['background-color: LemonChiffon']*len(row)
+        else:
+            return ['']*len(row)
+
+    return inout_df.style.hide().set_table_styles(inoutStyles).apply(highlight_totalinout, axis=1).to_html()
