@@ -383,9 +383,10 @@ def get_order(mrn, series, idList, query):
     # 保留datestop大于当前时间的行
     # 保留orderflag1 不为 NSC 的行
     df = pd.DataFrame(response)[
-        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'datestart', 'dr', 'mark']]
+        ['orderflag1', 'drname', 'dosage', 'frequency', 'ordertype', 'datestop', 'datestart', 'dr', 'mark', 'groupflag', 'selfpaid']]
     df = df[df['mark'] != '护理评估智能决策']
     df = df[df['orderflag1'] != 'NSC']
+    df = df[df['mark'] != '麻醉科使用']
     # convert datestop column to timestamp object
     # 保留未停医嘱
     df['datestop'] = pd.to_datetime(df['datestop'])
@@ -412,7 +413,10 @@ def get_order(mrn, series, idList, query):
     df['drname'] = df['drname'].replace(orderItemDict)
 
     # 计算剩余时间
-    df['dateleft'] = df['datestop'] - pd.Timestamp.now()
+    # 如果 ordertype 为 "R"，则计算 datestop 列与当前时间的差值
+    # 否则就计算当前时间与 datestart 列的差值
+    df['dateleft'] = df.apply(lambda x: x['datestop'] -
+                              pd.Timestamp.now() if x['ordertype'] == "R" else pd.Timestamp.now() - x['datestart'], axis=1)
 
     # 抗生素列表
     antibioticList = [
@@ -454,7 +458,7 @@ def get_order(mrn, series, idList, query):
 
     # 如果 df 的 drname 中包含在 antibioticList 中的元素的行，而且相应的 dateleft 大于 48 小时
     # 则检查trello里是否有“抗生素停用”card，有的话就删除
-    if not df[df['drname'].isin(antibioticList) & (df['dateleft'] > pd.Timedelta(hours=24))].empty:
+    if not df[df['drname'].isin(antibioticList) & (df['ordertype'] == "R") & (df['dateleft'] > pd.Timedelta(hours=24))].empty:
         response = requests.request(
             "GET",
             f"https://api.trello.com/1/lists/{idList}/cards",
@@ -470,32 +474,11 @@ def get_order(mrn, series, idList, query):
                 params=query
             )
 
-    ignoreList = ['饮水大于1500ML/日（如无禁忌）', '早期下床活动（如无禁忌）',
+    ignoreList = ['饮水大于1500ML/日（如无禁忌）',
+                  '早期下床活动（如无禁忌）',
                   '宣教预防VTE相关知识',
-                  '氯化钠注射液 0.9%:100mlX1',
-                  '瑞芬太尼针 2mgX5',
-                  '[集采]右美托咪定针 200ug:2mlX1',
-                  '[进口]罗哌卡因针 75mg:10mlX5',
-                  '间羟胺针 10mg:1mlX2',
-                  '麻黄硷针 30mg:1mlX10',
-                  '[仙居]苯磺顺阿曲库铵针 5mgX1',
-                  '[凯特力]七氟烷 ml',
-                  '乳酸钠林格注射液 500mlX1',
-                  '[万汶]羟乙基淀粉针 500ml:30g/4.5gX1',
-                  '复方电解质针 500mlX1',
-                  '瑞马唑仑针 36mgX1',
-                  '依托咪酯针 20mg:10mlX1',
-                  '格拉司琼针 3mg:3mlX5',
-                  '阿托品针 0.5mg:1mlX10',
-                  '纳布啡针 1ml:10mgX1',
-                  '[竟安]丙泊酚中/长链脂肪乳针 0.5g:50mlX1',
-                  '新斯的明针 1mg:2mlX10',
                   '[国产]舒芬太尼针 50ug:1mlX1',
-                  '[集采]丙泊酚中/长链脂肪乳针 0.2g:20mlX1',
-                  '',
-                  '',
-                  '',
-                  '',
+                  '瑞芬太尼针 2mgX5',
                   '',
                   ]
 
@@ -507,10 +490,14 @@ def get_order(mrn, series, idList, query):
 
     # dateleft列的显示格式改为  1days 5hours
     df['dateleft_dh'] = df['dateleft'].apply(
-        lambda x: f"{x.days}d {x.seconds // 3600}h")
+        lambda x: f"{x.days}d {x.seconds // 3600}h" if x.days >= 0 else f"{x.days+1}d {abs((x.seconds // 3600)-24)}h")
+
+    # 如果 groupflag 为 a-z 的英文字母，则将 drname 的内容改为  groupflag： drname
+    df['drname'] = df.apply(lambda x: f"{x['groupflag']}: {x['drname']}" if x['groupflag'] is not None and x['groupflag'].isalpha(
+    ) else x['drname'], axis=1)
 
     df = df[['drname', 'ordertype', 'dosage',
-             'frequency', 'dateleft', 'dateleft_dh', 'datestart', 'datestop', 'mark', 'dr']]
+             'frequency', 'dateleft', 'dateleft_dh', 'datestart', 'datestop', 'mark', 'dr', 'selfpaid']]
     df.rename(columns={'drname': '医嘱名称', 'ordertype': 'T',
               'dosage': '剂量', 'frequency': '频次', 'dateleft_dh': '剩余时间'}, inplace=True)
 
@@ -557,12 +544,12 @@ def get_order(mrn, series, idList, query):
             return ['']*len(row)
 
     def selfpaid_medication(row):
-        if row['mark'] is not None and '自费' in row['mark']:
+        if row['selfpaid'] == '1':
             return ['color: purple']*len(row)
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset='dateleft', axis=1).hide().set_table_attributes('style="width:1500px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).apply(selfpaid_medication, axis=1).to_html()
+    return df.style.hide(subset=['selfpaid'], axis=1).hide().set_table_attributes('style="width:1500px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).apply(selfpaid_medication, axis=1).to_html()
 
 # %%
 # 手术记录
@@ -1282,6 +1269,10 @@ def surgical_arrange(pList, attending, aName):
     arrangeList = arrangeList.sort_values(
         by=['room', 'cdo', 'AppOperativeDate'], ascending=[True, True, True])
 
+    # 替换 arrangeList 的 room 和 cdo 列的空值为空格
+    arrangeList.loc[:, 'room'] = arrangeList['room'].fillna('')
+    arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].fillna('')
+
     # %%
     # arrangeList.to_excel(
     #     f"D:\\working-sync\\手术通知\\手术清单-{upcomingSurgeryDate}-{aName}.xlsx", index=False)
@@ -1295,24 +1286,29 @@ def surgical_arrange(pList, attending, aName):
         arrangeList.to_excel(writer, sheet_name='Sheet1', index=False)
 
         # 获取 xlsxwriter 对象
-        # workbook = writer.book
+        workbook = writer.book
         worksheet = writer.sheets['Sheet1']
 
+        # 创建一个格式对象
+        format1 = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+        format2 = workbook.add_format({'text_wrap': True, 'valign': 'vcenter'})
+
         # 设置列宽度
-        worksheet.set_column('A:A', 5)  # room
-        worksheet.set_column('B:B', 5)  # cdo
-        worksheet.set_column('C:C', 10)  # pname
-        worksheet.set_column('D:D', 10)  # mrn
-        worksheet.set_column('E:E', 10)  # Isroom
-        worksheet.set_column('F:F', 50)  # diag
-        worksheet.set_column('G:G', 50)  # drremark
-        worksheet.set_column('H:H', 5)  # Sex
-        worksheet.set_column('I:I', 5)  # Age
-        worksheet.set_column('J:J', 10)  # AppOperativeDate
-        worksheet.set_column('K:K', 10)  # arrangedate
-        worksheet.set_column('L:L', 10)  # Doctor
-        worksheet.set_column('M:M', 10)  # bedid
-        worksheet.set_column('N:N', 10)  # plandate
+        worksheet.set_column('A:A', 5, format1)  # room
+        worksheet.set_column('B:B', 5, format1)  # cdo
+        worksheet.set_column('C:C', 10, format1)  # pname
+        worksheet.set_column('D:D', 10, format1)  # mrn
+        worksheet.set_column('E:E', 5, format1)  # Isroom
+        worksheet.set_column('F:F', 50, format2)  # diag
+        worksheet.set_column('G:G', 50, format2)  # drremark
+        worksheet.set_column('H:H', 50, format2)   # operp
+        worksheet.set_column('I:I', 5, format1)   # Sex
+        worksheet.set_column('J:J', 5, format1)  # Age
+        worksheet.set_column('K:K', 10, format1)  # AppOperativeDate
+        worksheet.set_column('L:L', 10, format1)  # arrangedate
+        worksheet.set_column('M:M', 10, format1)  # Doctor
+        worksheet.set_column('N:N', 10, format1)  # bedid
+        worksheet.set_column('O:O', 10, format1)  # plandate
 
     def highlight_upcomingSurgeryDate(row):
         if pd.notnull(row['AppOperativeDate']) and pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
