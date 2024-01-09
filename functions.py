@@ -286,7 +286,7 @@ def get_exam_results(mrn, duration):
 
     df = pd.DataFrame(totalExamRes)
     df = df.sort_values(by='repdate', ascending=False)
-    df['repdate'] = pd.to_datetime(df['repdate'])
+    df['repdate'] = pd.to_datetime(df['repdate'], format='%Y-%m-%dT%H:%M:%S')
     df['repdate'] = df['repdate'].dt.strftime('%Y%m%d')
 
     df.rename(columns={'checkitem': '检查项目', 'repdate': '检查日期',
@@ -311,10 +311,54 @@ def get_exam_results(mrn, duration):
             'props': [('width', '300px')]}
     ]
 
-    return df.style.apply(highlight_today, axis=1).hide().set_table_styles(examStyles).to_html(classes="dataframe", table_id="testtable")
+    return df.style.apply(highlight_today, axis=1).hide().set_table_styles(examStyles).to_html()
 
+
+def get_pathology(mrn):
+
+    # 根据住院号获取检查结果列表
+    pathologyList = requests.get(
+        f"http://20.21.1.224:5537/api/api/LisReport/GetPacsPth/{mrn}/").json()
+
+    if not pathologyList:
+        return "No match found"
+
+    # 根据 pathologyList 里的fromdb、repo项目，构建url，格式为 "http://20.21.1.224:5537/api/api/LisReport/Get{pathology['fromdb']}Detail/{mrn}/{pathology['repo']}"
+    # 通过request获取具体检查结果，筛选出 checkitem,repdate,repdiag,repcontent
+    # 合并输出 dataframe
+
+    df = pd.DataFrame(pathologyList)
+    df = df[['repdate', 'checkitem', 'repdiag']]
+    df = df.sort_values(by='repdate', ascending=False)
+    df['repdate'] = pd.to_datetime(df['repdate'], format='%Y-%m-%d %H:%M:%S')
+    df['repdate'] = df['repdate'].dt.strftime('%Y%m%d')
+
+    df.rename(columns={'repdate': '检查日期', 'checkitem': '检查项目',
+                       'repdiag': '诊断'}, inplace=True)
+
+    # 定义一个函数，该函数会检查一个日期是否是今天的日期
+
+    def highlight_today(row):
+        if pd.to_datetime(row['检查日期']).date() == datetime.datetime.now().date():
+            return ['background-color: yellow']*len(row)
+        else:
+            return ['']*len(row)
+
+    # 使用 Styler 类的 set_table_styles 方法设置列宽
+    pathologyStyles = [
+        {'selector': 'th.col_heading.level0.col0',
+            'props': [('width', '80px')]},
+        {'selector': 'th.col_heading.level0.col1',
+            'props': [('width', '80px')]},
+        {'selector': 'th.col_heading.level0.col2',
+            'props': [('width', '320px')]},
+    ]
+
+    return df.style.apply(highlight_today, axis=1).hide().set_table_styles(pathologyStyles).to_html()
 
 # hDocuList = requests.get(f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/4310592/11/emr").json()
+
+
 def get_preAnesth(hDocuList):
 
     if isinstance(hDocuList, dict):

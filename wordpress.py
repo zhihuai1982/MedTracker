@@ -150,6 +150,10 @@ for index, row in pList.iterrows():
     pContent += "<div class='table_container'>" + \
         get_exam_results(row['mrn'], duration) + "</div>\n"
 
+    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>病理结果</a></h3>\n<!-- /wp:heading -->\n"
+    pContent += "<div class='table_container'>" + \
+        get_pathology(row['mrn']) + "</div>\n"
+
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>会诊结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
         consultation(hDocuList) + "</div>\n"
