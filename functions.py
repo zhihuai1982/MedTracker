@@ -196,7 +196,9 @@ def get_lab_results(mrn, duration):
             # 删除 'zdbz' 为空白的行
             return group[group['zdbz'].replace('', pd.NA).notnull()]
 
-    df = df.groupby('checkitem').apply(process_group).reset_index(drop=True)
+    # checkitem修改名字后会重复，所以需要加入bgsj加以区分
+    df = df.groupby(['checkitem', 'bgsj']).apply(
+        process_group).reset_index(drop=True)
 
     # 将df按照bgsj由大到小逆向排序
     df = df.sort_values(by='bgsj', ascending=False)
@@ -1352,14 +1354,22 @@ def surgical_arrange(pList, attending, aName):
     response = requests.request(
         "POST", url, headers=headers, data=json.dumps(payload)).json()['resultJson']
 
-    preArrangedf = pd.DataFrame(response)
+    # 如果response为空列表的话，新建空的preArrangedf，包含mrn，pname，operp，remark，cdonm，aneask，agentnm，askdate列
+    if response == []:
+        preArrangedf = pd.DataFrame(columns=[
+                                    'mrn', 'pname', 'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate'])
+    else:
+        preArrangedf = pd.DataFrame(response)
 
-    preArrangedf = preArrangedf[['mrn', 'pname',
-                                'preoperp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate']]
+        preArrangedf = preArrangedf[['mrn', 'pname',
+                                    'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate']]
 
-    # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
-    preArrangedf.loc[:, 'askdate'] = preArrangedf['askdate'].str.replace(
-        '/', '-').str.split(' ').str[0]
+        # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
+        preArrangedf.loc[:, 'askdate'] = preArrangedf['askdate'].str.replace(
+            '/', '-').str.split(' ').str[0]
+
+    # 重命名operp为arroperp
+    preArrangedf.rename(columns={'operp': 'arroperp'}, inplace=True)
 
     # 合并 arrangeList 和 preArrangedf，保存到 arrangeList
     arrangeList = arrangeList.merge(
@@ -1410,7 +1420,7 @@ def surgical_arrange(pList, attending, aName):
         worksheet.set_column('M:M', 10, format1)  # Doctor
         worksheet.set_column('N:N', 10, format1)  # bedid
         worksheet.set_column('O:O', 10, format1)  # plandate
-        worksheet.set_column('P:P', 50, format1)  # preoperp
+        worksheet.set_column('P:P', 50, format2)  # arroperp
         worksheet.set_column('Q:Q', 20, format2)  # remark
         worksheet.set_column('R:R', 10, format1)  # cdonm
         worksheet.set_column('S:S', 10, format1)  # aneask
@@ -1436,13 +1446,13 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col1',
             'props': [('width', '40px')]},             # cdo
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '50px')]},             # pname
+            'props': [('width', '70px')]},             # pname
         {'selector': 'th.col_heading.level0.col3',
-            'props': [('width', '60px')]},             # mrn
+            'props': [('width', '80px')]},             # mrn
         {'selector': 'th.col_heading.level0.col4',
-            'props': [('width', '40px')]},             # Isroom
+            'props': [('width', '60px')]},             # Isroom
         {'selector': 'th.col_heading.level0.col5',
-            'props': [('width', '200px')]},            # diag
+            'props': [('width', '150px')]},            # diag
         {'selector': 'th.col_heading.level0.col6',
             'props': [('width', '200px')]},            # drremark
         {'selector': 'th.col_heading.level0.col7',
@@ -1450,7 +1460,7 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col8',
             'props': [('width', '30px')]},            # PatientSex
         {'selector': 'th.col_heading.level0.col9',
-            'props': [('width', '30px')]},            # PatientAge
+            'props': [('width', '40px')]},            # PatientAge
         {'selector': 'th.col_heading.level0.col10',
             'props': [('width', '100px')]},            # AppOperativeDate
         {'selector': 'th.col_heading.level0.col11',
