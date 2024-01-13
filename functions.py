@@ -479,7 +479,8 @@ def get_order(mrn, series, idList, query):
         '亚胺培南西司他丁针 0.5/0.5gX1',
         '[北京]左氧氟沙星针 0.5g:100mlX1',
         '[进口]利奈唑胺葡萄糖针 0.6g:300mlX1',
-        '[罗氏芬]头孢曲松针 1gX1'
+        '[罗氏芬]头孢曲松针 1gX1',
+        '[集采]头孢哌酮舒巴坦针 1.0gX1'
     ]
 
     # workflow
@@ -824,7 +825,7 @@ def highcharts(mrn, series):
         df['pointInTimel']).dt.tz_localize('UTC').astype('int64') // 10**6
 
     # 创建 temp_df 的副本
-    temp_df = df[df['content'].str.contains("体温", na=False)].copy()
+    temp_df = df[df['content'].str.contains("^体温.*:.*℃$", na=False)].copy()
 
     # 如果 temp_df 为空，则返回空值
     if temp_df.empty:
