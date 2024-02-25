@@ -145,7 +145,7 @@ def get_lab_results(mrn, duration):
     hLabListLimit = [item for item in hLabList if (
         pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days <= duration]
 
-    checkitemList = ['CBC', 'hsCRP', "生化检查", "血气检查"]
+    checkitemList = ['CBC', 'hsCRP', 'PTH', "生化检查", "血气检查"]
     # 筛选出 hLabList 中 checkitem 包含在 checkitemList 中的字典
     hLabListSelect = [item for item in hLabList if item['checkitem'] in checkitemList and (
         pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days > duration]
@@ -330,7 +330,10 @@ def get_pathology(mrn):
     df = pd.DataFrame(pathologyList)
     df = df[['repdate', 'checkitem', 'repdiag']]
     df = df.sort_values(by='repdate', ascending=False)
-    df['repdate'] = pd.to_datetime(df['repdate'], format='%Y-%m-%d %H:%M:%S')
+    df['repdate'] = pd.to_datetime(
+        df['repdate'], format='mixed')
+    # df['repdate'], format='mixed', dayfirst=False)
+    # df['repdate'] = pd.to_datetime(df['repdate'], format='%Y-%m-%d %H:%M:%S')
     df['repdate'] = df['repdate'].dt.strftime('%Y%m%d')
 
     df.rename(columns={'repdate': '检查日期', 'checkitem': '检查项目',
@@ -443,6 +446,10 @@ def get_order(mrn, series, idList, query):
     df = df[((df['datestop'] > pd.Timestamp.now()) & (df['ordertype'] == "R")) |
             ((df['datestart'] > pd.Timestamp.now().normalize() - pd.Timedelta(days=1)) & (df['ordertype'] == "S"))]
 
+    # 如果df为空的话，返回"No match found"
+    if df.empty:
+        return "No match found"
+
     # 创建一个字典，用于替换checkitem里的内容
     # 比如将 “ADA,CA,AST,ALP,GGT,MG,PHOS,CK,LDH,hsCRP,同型半胱氨,CysC,D3-H,NEFA,RBP,SAA,TBA,LP(a),*LDL,‖生化筛查”替换为“生化全套”
     orderItemDict = {
@@ -474,12 +481,14 @@ def get_order(mrn, series, idList, query):
         '[集采]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1',
         '亚胺培南西司他丁针 0.5/0.5gX1',
         '[西力欣]头孢呋辛针 750mgX1',
+        '[集采]头孢呋辛针 1.5gX1',
         '[合资]哌拉西林他唑巴坦针 4.5g(4.0g/0.5g)X1',
         '头孢哌酮舒巴坦针 1.5gX1',
         '亚胺培南西司他丁针 0.5/0.5gX1',
         '[北京]左氧氟沙星针 0.5g:100mlX1',
         '[进口]利奈唑胺葡萄糖针 0.6g:300mlX1',
         '[罗氏芬]头孢曲松针 1gX1',
+        '[集采]克林霉素水针 0.3g:2mlX1',
         '[集采]头孢哌酮舒巴坦针 1.0gX1'
     ]
 
@@ -953,14 +962,17 @@ def highcharts(mrn, series):
 
     # draingage_df = df[df['content'].str.contains('负压管|皮下引流管', na=False)].copy()
     # 创建一个列表
-    tube_types = ["负压管", "皮下引流管", "腹腔负压引流", "管", "引流"]
+    # tube_types = ["负压管", "皮下引流管", "腹腔负压引流", "管", "引流"]
 
     # 使用 join() 函数将列表中的元素连接成一个字符串
-    tube_types_str = "|".join(tube_types)
+    # tube_types_str = "|".join(tube_types)
 
     # 使用这个字符串和正则表达式进行筛选
+    # draingage_df = df[df['content'].str.extract(
+    #     f'({tube_types_str})\\d*: *\\d+ml', expand=False).notna()].copy()
+
     draingage_df = df[df['content'].str.extract(
-        f'({tube_types_str})\\d*: *\\d+ml', expand=False).notna()].copy()
+        '(.*)\\d*: *\\d+ml$', expand=False).notna()].copy()
 
     # 如果 draingage_df 为空，则返回空值
     if draingage_df.empty:
@@ -984,6 +996,12 @@ def highcharts(mrn, series):
         "尿", na=False), 'volume'] = draingage_df['volume'] / 10
     draingage_df.loc[draingage_df['tubeTag'].str.contains(
         "尿", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/10"
+
+    # 如果content里包含“管饲”，则将volume列的值除以10，并在content的内容里添加“/10”
+    # draingage_df.loc[draingage_df['tubeTag'].str.contains(
+    #     "管饲", na=False), 'volume'] = draingage_df['volume'] / 10
+    # draingage_df.loc[draingage_df['tubeTag'].str.contains(
+    #     "管饲", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/10"
 
     # print(draingage_df[['pointInTimel','content','tubeTag','volume']])
 
@@ -1223,7 +1241,7 @@ def surgical_arrange(pList, attending, aName):
 
     # %%
     surgeryScheduleDF = surgeryScheduleDF[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
-                                           'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode']]
+                                           'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode', 'PatientPhone']]
     # 删除bookList的 NoticeFlag为“取消”的行
     surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF['NoticeFlag'] != '取消']
 
@@ -1257,7 +1275,7 @@ def surgical_arrange(pList, attending, aName):
             prelastSurgeryDate_str}"
     ).json())
 
-    surgeons = ['侯铁宁', '肖芒', '姜晓华', '董志怀', '司怡十美']
+    surgeons = ['肖芒', '姜晓华', '董志怀', '周森浩']
 
     prelastSurgeryList = prelastSurgeryList[[
         'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
@@ -1308,7 +1326,7 @@ def surgical_arrange(pList, attending, aName):
                               (arrangeList['plandate'] == upcomingSurgeryDate_str)]
 
     arrangeList = arrangeList[['room', 'cdo', 'pname', 'mrn', 'Isroom', 'diag',
-                               'drremark', 'operp', 'PatientSex', 'PatientAge', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate', ]]
+                               'drremark', 'operp', 'PatientSex', 'PatientAge', 'PatientPhone', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate']]
 
     # 把arrangelist中的room列和cdo列改为字符串格式，并删除cdo列内容中的 .0
     arrangeList.loc[:, 'room'] = arrangeList['room'].astype(str)
@@ -1407,7 +1425,12 @@ def surgical_arrange(pList, attending, aName):
         preArrangedf = pd.DataFrame(response)
 
         preArrangedf = preArrangedf[['mrn', 'pname',
-                                    'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate']]
+                                     'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate', 'drpname']]
+
+        # 筛选出 drpname 列包含“肖芒”的行
+        preArrangedf = preArrangedf[preArrangedf['drpname'] == aName]
+        # 删除 drpname 列
+        preArrangedf.drop(columns='drpname', inplace=True)
 
         # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
         preArrangedf.loc[:, 'askdate'] = preArrangedf['askdate'].str.replace(
@@ -1416,9 +1439,13 @@ def surgical_arrange(pList, attending, aName):
     # 重命名operp为arroperp
     preArrangedf.rename(columns={'operp': 'arroperp'}, inplace=True)
 
+    # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
+    preArrangedf.loc[:, 'askdate'] = preArrangedf['askdate'].str.replace(
+        '/', '-').str.split(' ').str[0]
+
     # 合并 arrangeList 和 preArrangedf，保存到 arrangeList
     arrangeList = arrangeList.merge(
-        preArrangedf, on=['mrn', 'pname'], how='left')
+        preArrangedf, on=['mrn', 'pname'], how='outer')
 
     # %%
     # arrangeList 根据 room，cdo，AppOperateiveDate 升序排列
@@ -1460,17 +1487,18 @@ def surgical_arrange(pList, attending, aName):
         worksheet.set_column('H:H', 50, format2)   # operp
         worksheet.set_column('I:I', 5, format1)   # Sex
         worksheet.set_column('J:J', 5, format1)  # Age
-        worksheet.set_column('K:K', 10, format1)  # AppOperativeDate
-        worksheet.set_column('L:L', 10, format1)  # arrangedate
-        worksheet.set_column('M:M', 10, format1)  # Doctor
-        worksheet.set_column('N:N', 10, format1)  # bedid
-        worksheet.set_column('O:O', 10, format1)  # plandate
-        worksheet.set_column('P:P', 50, format2)  # arroperp
-        worksheet.set_column('Q:Q', 20, format2)  # remark
-        worksheet.set_column('R:R', 10, format1)  # cdonm
-        worksheet.set_column('S:S', 10, format1)  # aneask
-        worksheet.set_column('T:T', 10, format1)  # agentnm
-        worksheet.set_column('U:U', 10, format1)  # askdate
+        worksheet.set_column('K:K', 12, format1)  # Phone
+        worksheet.set_column('L:L', 10, format1)  # AppOperativeDate
+        worksheet.set_column('M:M', 10, format1)  # arrangedate
+        worksheet.set_column('N:N', 10, format1)  # Doctor
+        worksheet.set_column('O:O', 10, format1)  # bedid
+        worksheet.set_column('P:P', 10, format1)  # plandate
+        worksheet.set_column('Q:Q', 50, format2)  # arroperp
+        worksheet.set_column('R:R', 20, format2)  # remark
+        worksheet.set_column('S:S', 10, format1)  # cdonm
+        worksheet.set_column('T:T', 10, format1)  # aneask
+        worksheet.set_column('U:U', 10, format1)  # agentnm
+        worksheet.set_column('V:V', 10, format1)  # askdate
 
     def highlight_upcomingSurgeryDate(row):
         if pd.notnull(row['AppOperativeDate']) and pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
@@ -1507,26 +1535,28 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col9',
             'props': [('width', '40px')]},            # PatientAge
         {'selector': 'th.col_heading.level0.col10',
+            'props': [('width', '110px')]},            # PatientPhone
+        {'selector': 'th.col_heading.level0.col10',
             'props': [('width', '100px')]},            # AppOperativeDate
-        {'selector': 'th.col_heading.level0.col11',
-            'props': [('width', '100px')]},            # arrangedate
         {'selector': 'th.col_heading.level0.col12',
-            'props': [('width', '100px')]},            # Doctor
+            'props': [('width', '100px')]},            # arrangedate
         {'selector': 'th.col_heading.level0.col13',
-            'props': [('width', '100px')]},            # bedid
+            'props': [('width', '100px')]},            # Doctor
         {'selector': 'th.col_heading.level0.col14',
-            'props': [('width', '100px')]},             # plandate
+            'props': [('width', '100px')]},            # bedid
         {'selector': 'th.col_heading.level0.col15',
-            'props': [('width', '200px')]},             # preprop
+            'props': [('width', '100px')]},             # plandate
         {'selector': 'th.col_heading.level0.col16',
-            'props': [('width', '200px')]},             # remark
+            'props': [('width', '200px')]},             # preprop
         {'selector': 'th.col_heading.level0.col17',
-            'props': [('width', '40px')]},             # cdonm
+            'props': [('width', '200px')]},             # remark
         {'selector': 'th.col_heading.level0.col18',
-            'props': [('width', '60px')]},             # aneask
+            'props': [('width', '40px')]},             # cdonm
         {'selector': 'th.col_heading.level0.col19',
-            'props': [('width', '60px')]},             # agentnm
+            'props': [('width', '60px')]},             # aneask
         {'selector': 'th.col_heading.level0.col20',
+            'props': [('width', '60px')]},             # agentnm
+        {'selector': 'th.col_heading.level0.col21',
             'props': [('width', '100px')]}             # askdate
     ]
 
@@ -1546,7 +1576,7 @@ def surgical_arrange(pList, attending, aName):
             'props': 'position: -webkit-sticky; position: sticky; left:80px; background-color: #ffffff;'},
     ]
 
-    arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2500px;"').set_table_styles(
+    arrangeListHtml = arrangeList.style.hide().set_table_attributes('style="width:2600px;"').set_table_styles(
         widthStyle+columnFixStyle).apply(highlight_upcomingSurgeryDate, axis=1).apply(highlight_nextSurgeryDate, axis=1).to_html()
 
     return arrangeList, arrangeListHtml, upcomingSurgeryDate_str

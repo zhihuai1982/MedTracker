@@ -224,7 +224,8 @@ if not rj_df.empty:
 # https://robingeuens.com/blog/python-wordpress-api/
 
 user = "zhihuai1982"
-password = "BSNz VB3W InRj LlFr ueKU 1ZSk"
+# password = "BSNz VB3W InRj LlFr ueKU 1ZSk"
+password = "dtPD 9emY eyH8 Vcbn nl31 WKMr"
 credentials = user + ':' + password
 token = base64.b64encode(credentials.encode())
 header = {'Authorization': 'Basic ' + token.decode('utf-8')}
@@ -246,7 +247,7 @@ else:
     todayPostID = ''
 
 # todayPostID = ''
-url = f"https://www.digitalnomad.host:8766/wp-json/wp/v2/posts/{todayPostID}"
+url = f"https://www.digitalnomad.host:996/wp-json/wp/v2/posts/{todayPostID}"
 post = {
     'title': f"患者病情简报 - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
     'status': 'publish',

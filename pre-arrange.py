@@ -129,7 +129,7 @@ surgeryScheduleDF = pd.DataFrame(
 
 # %%
 surgeryScheduleDF = surgeryScheduleDF[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
-                                       'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode']]
+                                       'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode', 'PatientPhone']]
 # 删除bookList的 NoticeFlag为“取消”的行
 surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF['NoticeFlag'] != '取消']
 
@@ -163,7 +163,7 @@ prelastSurgeryList = pd.DataFrame(requests.get(
         prelastSurgeryDate_str}"
 ).json())
 
-surgeons = ['侯铁宁', '肖芒', '姜晓华', '董志怀', '司怡十美']
+surgeons = ['肖芒', '姜晓华', '董志怀', '司怡十美', '周森浩']
 
 prelastSurgeryList = prelastSurgeryList[[
     'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
@@ -214,7 +214,7 @@ arrangeList = arrangeList[arrangeList['plandate'].isna() |
                           (arrangeList['plandate'] == upcomingSurgeryDate_str)]
 
 arrangeList = arrangeList[['room', 'cdo', 'pname', 'mrn', 'Isroom', 'diag',
-                           'drremark', 'operp', 'PatientSex', 'PatientAge', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate', ]]
+                           'drremark', 'operp', 'PatientSex', 'PatientAge', 'PatientPhone', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate']]
 
 # 把arrangelist中的room列和cdo列改为字符串格式，并删除cdo列内容中的 .0
 arrangeList.loc[:, 'room'] = arrangeList['room'].astype(str)
@@ -305,10 +305,24 @@ headers = {
 response = requests.request(
     "POST", url, headers=headers, data=json.dumps(payload)).json()['resultJson']
 
-preArrangedf = pd.DataFrame(response)
+# 如果response为空列表的话，新建空的preArrangedf，包含mrn，pname，operp，remark，cdonm，aneask，agentnm，askdate列
+if response == []:
+    preArrangedf = pd.DataFrame(columns=[
+                                'mrn', 'pname', 'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate'])
+else:
+    preArrangedf = pd.DataFrame(response)
 
-preArrangedf = preArrangedf[['mrn', 'pname',
-                            'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate']]
+    preArrangedf = preArrangedf[['mrn', 'pname',
+                                'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate', 'drpname']]
+
+    # 筛选出 drpname 列包含“肖芒”的行
+    preArrangedf = preArrangedf[preArrangedf['drpname'] == aName]
+    # 删除 drpname 列
+    preArrangedf.drop(columns='drpname', inplace=True)
+
+    # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
+    preArrangedf.loc[:, 'askdate'] = preArrangedf['askdate'].str.replace(
+        '/', '-').str.split(' ').str[0]
 
 # 重命名operp为arroperp
 preArrangedf.rename(columns={'operp': 'arroperp'}, inplace=True)
@@ -319,7 +333,7 @@ preArrangedf.loc[:, 'askdate'] = preArrangedf['askdate'].str.replace(
 
 # 合并 arrangeList 和 preArrangedf，保存到 arrangeList
 arrangeList = arrangeList.merge(
-    preArrangedf, on=['mrn', 'pname'], how='left')
+    preArrangedf, on=['mrn', 'pname'], how='outer')
 
 # %%
 # arrangeList 根据 room，cdo，AppOperateiveDate 升序排列
@@ -361,14 +375,15 @@ with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
     worksheet.set_column('H:H', 50, format2)   # operp
     worksheet.set_column('I:I', 5, format1)   # Sex
     worksheet.set_column('J:J', 5, format1)  # Age
-    worksheet.set_column('K:K', 10, format1)  # AppOperativeDate
-    worksheet.set_column('L:L', 10, format1)  # arrangedate
-    worksheet.set_column('M:M', 10, format1)  # Doctor
-    worksheet.set_column('N:N', 10, format1)  # bedid
-    worksheet.set_column('O:O', 10, format1)  # plandate
-    worksheet.set_column('P:P', 50, format2)  # arroperp
-    worksheet.set_column('Q:Q', 20, format2)  # remark
-    worksheet.set_column('R:R', 10, format1)  # cdonm
-    worksheet.set_column('S:S', 10, format1)  # aneask
-    worksheet.set_column('T:T', 10, format1)  # agentnm
-    worksheet.set_column('U:U', 10, format1)  # askdate
+    worksheet.set_column('K:K', 12, format1)  # Phone
+    worksheet.set_column('L:L', 10, format1)  # AppOperativeDate
+    worksheet.set_column('M:M', 10, format1)  # arrangedate
+    worksheet.set_column('N:N', 10, format1)  # Doctor
+    worksheet.set_column('O:O', 10, format1)  # bedid
+    worksheet.set_column('P:P', 10, format1)  # plandate
+    worksheet.set_column('Q:Q', 50, format2)  # arroperp
+    worksheet.set_column('R:R', 20, format2)  # remark
+    worksheet.set_column('S:S', 10, format1)  # cdonm
+    worksheet.set_column('T:T', 10, format1)  # aneask
+    worksheet.set_column('U:U', 10, format1)  # agentnm
+    worksheet.set_column('V:V', 10, format1)  # askdate
