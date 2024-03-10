@@ -145,6 +145,7 @@ def get_lab_results(mrn, duration):
     hLabListLimit = [item for item in hLabList if (
         pd.Timestamp.now() - pd.Timestamp(item['repdate'])).days <= duration]
 
+    # %%
     checkitemList = ['CBC', 'hsCRP', 'PTH', "生化检查", "血气检查"]
     # 筛选出 hLabList 中 checkitem 包含在 checkitemList 中的字典
     hLabListSelect = [item for item in hLabList if item['checkitem'] in checkitemList and (
@@ -155,32 +156,32 @@ def get_lab_results(mrn, duration):
         hLabListSelect = pd.DataFrame(hLabListSelect).sort_values(
             by=['checkitem', 'repdate'], ascending=[True, False]).groupby('checkitem').head(1).to_dict(orient='records')
 
+    # %%
+
     # 合并hLabListLimit和hLabListSelect
     hLabListTotal = hLabListLimit+hLabListSelect
 
     if not hLabListTotal:
         return "No match found"
 
-    totalLabRes = []
-    for lab in hLabListTotal:
+    limitLabRes = []
+    for lab in hLabListLimit:
         url = f"http://20.21.1.224:5537/api/api/LisReport/GetLisReportDetail/{
             mrn}/{lab['dodate']}/{lab['specimenid']}/{lab['domany']}"
         labRes = requests.get(url).json()
         for item in labRes:
             # item['bgsj'] = lab['repdate']
             item['checkitem'] = lab['checkitem']
-        totalLabRes.extend(labRes)  # 将 labRes 的结果添加到 totalLabRes 列表中
+        limitLabRes.extend(labRes)  # 将 labRes 的结果添加到 limitLabRes 列表中
 
-    df = pd.DataFrame(totalLabRes)  # 将 totalLabRes 列表转换为 DataFrame
-    df = df[['xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj']]  # 选择需要的列
-
-    # 创建一个包含重点检验结果名称的列表
-    important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐", "肌酸激酶",
-                       "葡萄糖", '尿素/肌酐', '丙氨酸氨基转移酶', '天冬氨酸氨基转移酶', '白蛋白', '超敏C反应蛋白', 'D-二聚体(D-Di)']
-
-    # 删除df中 bgsj 小于当前日期-duration天 且 xmmc 不在 important_tests 中的行
-    df = df[~(((pd.Timestamp.now() - pd.to_datetime(df['bgsj'], format="mixed")
-                ).dt.days > duration) & (~df['xmmc'].isin(important_tests)))]
+    limitDF = pd.DataFrame(limitLabRes)  # 将 limitLabRes 列表转换为 DataFrame
+    # 如果limitDF为空，则拥有'xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj'列的空表
+    if limitDF.empty:
+        limitDF = pd.DataFrame(
+            columns=['xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj'])
+    else:
+        limitDF = limitDF[['xmmc', 'jg', 'zdbz',
+                           'bgsj', 'checkitem', 'ckqj']]  # 选择需要的列
 
     def process_group(group):
         if group['zdbz'].replace('', pd.NA).isnull().all():  # 如果 'zdbz' 列都是空白
@@ -197,8 +198,39 @@ def get_lab_results(mrn, duration):
             return group[group['zdbz'].replace('', pd.NA).notnull()]
 
     # checkitem修改名字后会重复，所以需要加入bgsj加以区分
-    df = df.groupby(['checkitem', 'bgsj']).apply(
+    limitDF = limitDF.groupby(['checkitem', 'bgsj']).apply(
         process_group).reset_index(drop=True)
+
+    selectLabRes = []
+    for lab in hLabListSelect:
+        url = f"http://20.21.1.224:5537/api/api/LisReport/GetLisReportDetail/{
+            mrn}/{lab['dodate']}/{lab['specimenid']}/{lab['domany']}"
+        labRes = requests.get(url).json()
+        for item in labRes:
+            # item['bgsj'] = lab['repdate']
+            item['checkitem'] = lab['checkitem']
+        selectLabRes.extend(labRes)  # 将 labRes 的结果添加到 limitLabRes 列表中
+
+    selectDF = pd.DataFrame(selectLabRes)  # 将 limitLabRes 列表转换为 DataFrame
+    # 如果 selectDF 为空，则拥有'xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj'列的空表
+    if selectDF.empty:
+        selectDF = pd.DataFrame(
+            columns=['xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj'])
+    else:
+        selectDF = selectDF[['xmmc', 'jg', 'zdbz',
+                            'bgsj', 'checkitem', 'ckqj']]  # 选择需要的列
+
+    # 创建一个包含重点检验结果名称的列表
+    important_tests = ["血小板计数", "白细胞计数", "中性粒百分数", "血红蛋白量", "钾", "钙", "肌酐", "肌酸激酶", "甲状旁腺素",
+                       "葡萄糖", '尿素/肌酐', '丙氨酸氨基转移酶', '天冬氨酸氨基转移酶', '白蛋白', '超敏C反应蛋白', 'D-二聚体(D-Di)']
+
+    # 删除df中 bgsj 小于当前日期-duration天 且 xmmc 不在 important_tests 中的行
+    selectDF = selectDF[selectDF['xmmc'].isin(important_tests)]
+
+    # %%
+
+    # 合并 limitDF 和 selectDF
+    df = pd.concat([limitDF, selectDF], ignore_index=True)
 
     # 将df按照bgsj由大到小逆向排序
     df = df.sort_values(by='bgsj', ascending=False)
@@ -405,7 +437,7 @@ def get_nurse_doc(mrn, series):
     response = requests.get(nurseUrl)
 
     # 使用正则表达式匹配和提取字符串
-    pattern = r"【过去史/近期手术/近期治疗】:(.*?)【个人史】"
+    pattern = r"【用药史】:(.*?)【个人史】"
     content = re.search(pattern, response.text, re.S)
 
     if content:
