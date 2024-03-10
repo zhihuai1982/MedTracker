@@ -1006,6 +1006,12 @@ def highcharts(mrn, series):
     draingage_df = df[df['content'].str.extract(
         '(.*)\\d*: *\\d+ml$', expand=False).notna()].copy()
 
+    # draingage_df的pointInTimel_utc列为记录时间，筛选出记录时间为7天内的数据行
+    draingage_df['pointInTimel'] = pd.to_datetime(
+        draingage_df['pointInTimel'])
+    draingage_df = draingage_df[draingage_df['pointInTimel'] >= (
+        datetime.datetime.now() - datetime.timedelta(days=7))]
+
     # 如果 draingage_df 为空，则返回空值
     if draingage_df.empty:
         return temp_glucose_chart
@@ -1023,17 +1029,23 @@ def highcharts(mrn, series):
     # volume列转换为数值
     draingage_df.loc[:, 'volume'] = pd.to_numeric(draingage_df['volume'])
 
-    # 如果content里包含“尿”，则将volume列的值除以10，并在content的内容里添加“/10”
+    # 如果content里包含“尿”，则将volume列的值除以100，并在content的内容里添加“/100”
     draingage_df.loc[draingage_df['tubeTag'].str.contains(
-        "尿", na=False), 'volume'] = draingage_df['volume'] / 10
+        "尿", na=False), 'volume'] = draingage_df['volume'] / 100
     draingage_df.loc[draingage_df['tubeTag'].str.contains(
-        "尿", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/10"
+        "尿", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/100"
 
-    # 如果content里包含“管饲”，则将volume列的值除以10，并在content的内容里添加“/10”
-    # draingage_df.loc[draingage_df['tubeTag'].str.contains(
-    #     "管饲", na=False), 'volume'] = draingage_df['volume'] / 10
-    # draingage_df.loc[draingage_df['tubeTag'].str.contains(
-    #     "管饲", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/10"
+    # 如果content里包含“饲”，则将volume列的值除以100，并在content的内容里添加“/100”
+    draingage_df.loc[draingage_df['tubeTag'].str.contains(
+        "饲", na=False), 'volume'] = draingage_df['volume'] / 100
+    draingage_df.loc[draingage_df['tubeTag'].str.contains(
+        "饲", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/100"
+
+    # 如果content里包含“粪便”，则将volume列的值除以100，并在content的内容里添加“/100”
+    draingage_df.loc[draingage_df['tubeTag'].str.contains(
+        "粪便", na=False), 'volume'] = draingage_df['volume'] / 100
+    draingage_df.loc[draingage_df['tubeTag'].str.contains(
+        "粪便", na=False), 'tubeTag'] = draingage_df['tubeTag'] + "/100"
 
     # print(draingage_df[['pointInTimel','content','tubeTag','volume']])
 
