@@ -1167,6 +1167,21 @@ def trello_note(trelloListId, place):
                             color = card.labels[0].color;
                         }}
 
+                        // 将color值转换相应的浅色，并用十六进制表达
+                        if (color == "green") {{
+                            color = "#7EE2B8";
+                        }} else if (color == "yellow") {{
+                            color = "#FFFFA0";
+                        }} else if (color == "orange") {{
+                            color = "#fed995";
+                        }} else if (color == "red") {{
+                            color = "#FFB0B0";
+                        }} else if (color == "purple") {{
+                            color = "#d0c8fa";
+                        }} else if (color == "blue") {{
+                            color = "#85B8FF";
+                            }}
+
                         var start_days = "";
                         var due_days = "";
 
@@ -1201,7 +1216,7 @@ def trello_note(trelloListId, place):
                         }}
 
                         var shortUrl = card.shortUrl;
-                        $('#trello-content-{place}-{trelloListId}').append("<li style='background-color: light" + color + ";'><a href='"+ shortUrl+"' target='_blank'>"+name + " " + start_days + due_days + "</a></li>"); // 将每个card的name属性显示在页面上
+                        $('#trello-content-{place}-{trelloListId}').append("<li style='background-color: " + color + ";'><a href='"+ shortUrl+"' target='_blank'>"+name + " " + start_days + due_days + "</a></li>"); // 将每个card的name属性显示在页面上
                     }});
                 }} else {{
                     $('#trello-content-1').append("Ajax请求失败")
