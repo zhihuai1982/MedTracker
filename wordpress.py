@@ -111,9 +111,11 @@ for index, row in pList.iterrows():
     print(row['mrn'])
 
     if int(row['admdays']) > 2:
-        duration = 1
+        lab_duration = 1
+        exam_duration = 7
     else:
-        duration = 30
+        lab_duration = 30
+        exam_duration = 30
 
     hDocuList = requests.get(
         f"http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{row['mrn']}/{row['series']}/emr", headers=headers).json()
@@ -144,11 +146,11 @@ for index, row in pList.iterrows():
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>化验结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
-        get_lab_results(row['mrn'], duration) + "</div>\n"
+        get_lab_results(row['mrn'], lab_duration) + "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>检查结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
-        get_exam_results(row['mrn'], duration) + "</div>\n"
+        get_exam_results(row['mrn'], exam_duration) + "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>病理结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
