@@ -360,7 +360,7 @@ def get_pathology(mrn):
     # 合并输出 dataframe
 
     df = pd.DataFrame(pathologyList)
-    df = df[['repdate', 'checkitem', 'repdiag']]
+    df = df[['repdate', 'checkitem', 'repdiag', 'repcontent']]
     df = df.sort_values(by='repdate', ascending=False)
     df['repdate'] = pd.to_datetime(
         df['repdate'], format='mixed')
@@ -368,8 +368,8 @@ def get_pathology(mrn):
     # df['repdate'] = pd.to_datetime(df['repdate'], format='%Y-%m-%d %H:%M:%S')
     df['repdate'] = df['repdate'].dt.strftime('%Y%m%d')
 
-    df.rename(columns={'repdate': '检查日期', 'checkitem': '检查项目',
-                       'repdiag': '诊断'}, inplace=True)
+    df.rename(columns={'repdate': '检查日期', 'checkitem': '检查项目', 'repcontent': '病理描述',
+                       'repdiag': '病理诊断'}, inplace=True)
 
     # 定义一个函数，该函数会检查一个日期是否是今天的日期
 
@@ -386,7 +386,9 @@ def get_pathology(mrn):
         {'selector': 'th.col_heading.level0.col1',
             'props': [('width', '80px')]},
         {'selector': 'th.col_heading.level0.col2',
-            'props': [('width', '320px')]},
+            'props': [('width', '200px')]},
+        {'selector': 'th.col_heading.level0.col3',
+            'props': [('width', '200px')]},
     ]
 
     return df.style.apply(highlight_today, axis=1).hide().set_table_styles(pathologyStyles).to_html()
@@ -521,7 +523,9 @@ def get_order(mrn, series, idList, query):
         '[进口]利奈唑胺葡萄糖针 0.6g:300mlX1',
         '[罗氏芬]头孢曲松针 1gX1',
         '[集采]克林霉素水针 0.3g:2mlX1',
-        '[集采]头孢哌酮舒巴坦针 1.0gX1'
+        '[集采]头孢哌酮舒巴坦针 1.0gX1',
+        '阿米卡星针 0.2g:2mlX10',
+        '[集采]阿莫西林克拉维酸钾针 1.2gX1'
     ]
 
     # workflow
