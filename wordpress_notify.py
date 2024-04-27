@@ -104,7 +104,7 @@ header = {'Authorization': 'Basic ' + token.decode('utf-8')}
 # 读取 response.json， 如果 modified 提供的日期和今天的日期相同，则把 id 信息保存到变量 todayPostID 里
 
 # Load the data from the JSON file
-with open('response.json', 'r') as f:
+with open('response_notify.json', 'r') as f:
     jsondata = json.load(f)
 
 # Get today's date as a string
@@ -124,13 +124,13 @@ post = {
     'status': 'publish',
     'content': pContent
 }
-today_response = requests.post(url, headers=header, json=post, verify=False)
-print(today_response)
+response_notify = requests.post(url, headers=header, json=post, verify=False)
+print(response_notify)
 
 # %%
 
 # Parse the response text as JSON
-response_data = json.loads(today_response.text)
+response_data = json.loads(response_notify.text)
 
 # Extract the id and date
 data_to_save = {
@@ -140,6 +140,6 @@ data_to_save = {
 }
 
 # Save the data to a JSON file
-with open('today_response.json', 'w') as f:
+with open('response_notify.json', 'w') as f:
     json.dump(data_to_save, f)
 # %%

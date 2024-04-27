@@ -142,7 +142,7 @@ for index, row in pList.iterrows():
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>48h出入量</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
-        inout(row['mrn'], row['series']) + "</div>\n"
+        inout(row['mrn'], row['series'], row['id'], query) + "</div>\n"
 
     pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>化验结果</a></h3>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \

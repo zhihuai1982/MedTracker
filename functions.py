@@ -1658,7 +1658,7 @@ def surgical_arrange(pList, attending, aName):
 # 48h 出入量
 
 
-def inout(mrn, series):
+def inout(mrn, series, idList, query):
 
     url = "http://20.21.1.224:5537/hospital/NursingAssessmentService/GetInoutList"
 
@@ -1668,7 +1668,7 @@ def inout(mrn, series):
             "type": "0",
             "mrn": mrn,
             "series": series,
-            "startdate": f"{datetime.date.today() - datetime.timedelta(days=2)} 06:00:00",
+            "startdate": f"{datetime.date.today() - datetime.timedelta(days=1)} 06:00:00",
             "enddate": f"{datetime.date.today()} 06:00:00"
         },
         "logInfo": {
@@ -1741,7 +1741,7 @@ def inout(mrn, series):
     response = requests.request(
         "POST", url, headers=headers, data=json.dumps(payload)).json()['resultJson']
 
-    if response == None:
+    if not response:
         return ""
 
     # 将 response 转换为 DataFrame 并取前三列
@@ -1764,5 +1764,73 @@ def inout(mrn, series):
             return ['background-color: LemonChiffon']*len(row)
         else:
             return ['']*len(row)
+
+    # trello 引流量
+    trello_df = pd.DataFrame(response).iloc[:, :3]
+
+    #  删除trello_df中rcdtime包含“小时”的行
+    trello_df = trello_df[~trello_df['rcdtime'].str.contains('小时')]
+
+    # 删除trello_df中chuliang为 nan 的行
+    trello_df = trello_df.dropna(subset=['chuliang'])
+
+    #  删除trello_df中chuliang中包含“尿”或者“粪”或者“胃”的行
+    trello_df = trello_df[~trello_df['chuliang'].str.contains(
+        '尿|粪|胃', regex=True)]
+
+    # 如果 trello_df 非空
+    if not trello_df.empty:
+        # 将rcdtime的时间格式改为  4.26 6:30
+        trello_df['rcdtime'] = pd.to_datetime(
+            trello_df['rcdtime']).dt.strftime('%m.%d %H:%M')
+
+        # 在rcdtime的两端添加【】
+        trello_df['rcdtime'] = trello_df['rcdtime'].apply(
+            lambda x: f"【{x}】")
+
+        # 通过正则表达式将chuliang的内容进行删除，保留冒号前2个字符至末尾的字符
+        trello_df['chuliang'] = trello_df['chuliang'].apply(
+            lambda x: re.sub(".*(?=..:)", "", x))
+
+        # 将chuliang 的 : 替换为 ：，并在ml后添加；
+        trello_df['chuliang'] = trello_df['chuliang'].str.replace(
+            ':', '：') + '；'
+
+        # 将trello_df 的 内容由左到右，由上到下合并成字符串
+        trello_out = trello_df.apply(
+            lambda x: x.str.cat(sep=' '), axis=1).str.cat(sep=' ')
+
+        # 删除 【nan】
+        trello_out = re.sub(r'【nan】', '', trello_out)
+
+        response = requests.request(
+            "GET",
+            f"https://api.trello.com/1/lists/{idList}/cards",
+            headers={"Accept": "application/json"},
+            params=query).json()
+
+        for item in response:
+            if item['name'].startswith('引流量'):
+                card_id = item['id']
+                requests.request(
+                    "PUT",
+                    f"https://api.trello.com/1/cards/{card_id}",
+                    headers={"Accept": "application/json"},
+                    params=dict({"idList": idList,
+                                 "name": "引流量：" + trello_out},
+                                **query)
+                )
+
+        # 检查 response 中所有的 card 的 name 是否都没有以 "引流量" 开头
+        if all(not card['name'].startswith('引流量') for card in response):
+            # 如果所有的 card 的 name 都没有以 "引流量" 开头
+            requests.request(
+                "POST",
+                f"https://api.trello.com/1/lists/{idList}/cards",
+                headers={"Accept": "application/json"},
+                params=dict({"idList": idList,
+                             "name": "引流量：" + trello_out},
+                            **query)
+            )
 
     return inout_df.style.hide().set_table_styles(inoutStyles).apply(highlight_totalinout, axis=1).to_html()
