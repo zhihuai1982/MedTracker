@@ -1147,7 +1147,7 @@ add_action('wp_ajax_nopriv_my_ajax_handler', 'my_ajax_handler');
 """
 
 
-def trello_note(trelloListId, place):
+def trello_note(trelloListId, place, notify="false"):
     trello_note_ajax = f"""
     <script>
     jQuery(document).ready(function ($) {{
@@ -1162,6 +1162,10 @@ def trello_note(trelloListId, place):
                 if (response.success) {{
                     var cards = JSON.parse(response.data);
                     cards.forEach(function (card) {{
+
+                        // 在chrome浏览器里显示card内容
+                        // console.log(card);
+
                         var name = card.name; // 获取每个card对象的name属性值
                         var start = card.start;
                         var due = card.due;
@@ -1169,6 +1173,12 @@ def trello_note(trelloListId, place):
                         var color = "";
                         if (card.labels[0]){{
                             color = card.labels[0].color;
+                        }}
+
+                        var member = "";
+                        if (card.idMembers[0] & {notify}){{
+                            // 临时跳出循环
+                            return;
                         }}
 
                         // 将color值转换相应的浅色，并用十六进制表达
