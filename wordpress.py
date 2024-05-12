@@ -160,7 +160,10 @@ for index, row in pList.iterrows():
     pContent += "<div class='table_container'>" + \
         consultation(hDocuList) + "</div>\n"
 
-    pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>既往史</a></h3>\n<!-- /wp:heading -->\n"
+    if int(row['admdays']) == 1:
+        pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading' style='background-color: yellow;'><a class='note_link' href='#xiao-notes'>既往史</a></h3>\n<!-- /wp:heading -->\n"
+    else:
+        pContent += "<!-- wp:heading {'level':3} -->\n<h3 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>既往史</a></h3>\n<!-- /wp:heading -->\n"
 
     pContent += "<!-- wp:heading {'level':4} -->\n<h4 class='wp-block-heading'><a class='note_link' href='#xiao-notes'>麻醉会诊</a></h4>\n<!-- /wp:heading -->\n"
     pContent += "<div class='table_container'>" + \
