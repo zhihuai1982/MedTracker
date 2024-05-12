@@ -645,7 +645,17 @@ def get_order(mrn, series, idList, query):
         else:
             return ['']*len(row)
 
-    return df.style.hide(subset=['dateleft', 'selfpaid'], axis=1).hide().set_table_attributes('style="width:1500px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).apply(selfpaid_medication, axis=1).to_html()
+    # 定义一个重点医嘱的列表
+    important_orders = ['钾', '葡萄糖酸钙', '氯化钙', '阿司匹林', '氯吡格雷', '低分子肝素']
+
+    def highlight_important_orders(row):
+        if any(order in row['医嘱名称'] for order in important_orders):
+            # 如果 row['医嘱名称'] 包含 important_orders 中的任何一个元素
+            return ['color: red']*len(row)
+        else:
+            return ['']*len(row)
+
+    return df.style.hide(subset=['dateleft', 'selfpaid'], axis=1).hide().set_table_attributes('style="width:1500px;"').set_table_styles(orderStyles+columnFixStyle).apply(highlight_today, axis=1).apply(selfpaid_medication, axis=1).apply(highlight_important_orders, axis=1).to_html()
 
 # %%
 # 手术记录
