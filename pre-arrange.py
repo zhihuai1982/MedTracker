@@ -129,7 +129,7 @@ surgeryScheduleDF = pd.DataFrame(
 
 # %%
 surgeryScheduleDF = surgeryScheduleDF[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
-                                       'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode', 'PatientPhone']]
+                                       'Doctor', 'NoticeFlag', 'noticeRecord', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode', 'PatientPhone']]
 # 删除bookList的 NoticeFlag为“取消”的行
 surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF['NoticeFlag'] != '取消']
 
@@ -214,7 +214,7 @@ arrangeList = arrangeList[arrangeList['plandate'].isna() |
                           (arrangeList['plandate'] == upcomingSurgeryDate_str)]
 
 arrangeList = arrangeList[['room', 'cdo', 'pname', 'mrn', 'Isroom', 'diag',
-                           'drremark', 'operp', 'PatientSex', 'PatientAge', 'PatientPhone', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate']]
+                           'drremark', 'operp', 'PatientSex', 'PatientAge', 'PatientPhone', 'AppOperativeDate', 'arrangedate', 'NoticeFlag', 'noticeRecord', 'Doctor', 'bedid', 'plandate']]
 
 # 把arrangelist中的room列和cdo列改为字符串格式，并删除cdo列内容中的 .0
 arrangeList.loc[:, 'room'] = arrangeList['room'].astype(str)

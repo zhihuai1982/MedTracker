@@ -525,6 +525,7 @@ def get_order(mrn, series, idList, query):
         '[集采]克林霉素水针 0.3g:2mlX1',
         '[集采]头孢哌酮舒巴坦针 1.0gX1',
         '阿米卡星针 0.2g:2mlX10',
+        '[合资]莫西沙星针 0.4g:250mlX1',
         '[集采]阿莫西林克拉维酸钾针 1.2gX1'
     ]
 
@@ -1314,7 +1315,7 @@ def surgical_arrange(pList, attending, aName):
 
     # %%
     surgeryScheduleDF = surgeryScheduleDF[['PatientName',  'PatientID',  'Isroom', 'Diagnose', 'drremark', 'PatientSex', 'PatientAge',
-                                           'Doctor', 'NoticeFlag', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode', 'PatientPhone']]
+                                           'Doctor', 'NoticeFlag', 'noticeRecord', 'AppointmentIn', 'AppOperativeDate', 'arrangedate', 'dohoscode', 'PatientPhone']]
     # 删除bookList的 NoticeFlag为“取消”的行
     surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF['NoticeFlag'] != '取消']
 
@@ -1399,7 +1400,7 @@ def surgical_arrange(pList, attending, aName):
                               (arrangeList['plandate'] == upcomingSurgeryDate_str)]
 
     arrangeList = arrangeList[['room', 'cdo', 'pname', 'mrn', 'Isroom', 'diag',
-                               'drremark', 'operp', 'PatientSex', 'PatientAge', 'PatientPhone', 'AppOperativeDate', 'arrangedate', 'Doctor', 'bedid', 'plandate']]
+                               'drremark', 'operp', 'PatientSex', 'PatientAge', 'PatientPhone', 'AppOperativeDate', 'arrangedate', 'NoticeFlag', 'noticeRecord', 'Doctor', 'bedid', 'plandate']]
 
     # 把arrangelist中的room列和cdo列改为字符串格式，并删除cdo列内容中的 .0
     arrangeList.loc[:, 'room'] = arrangeList['room'].astype(str)
