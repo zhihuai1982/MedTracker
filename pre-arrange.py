@@ -163,7 +163,7 @@ prelastSurgeryList = pd.DataFrame(requests.get(
         prelastSurgeryDate_str}"
 ).json())
 
-surgeons = ['肖芒', '姜晓华', '董志怀', '司怡十美', '周森浩']
+surgeons = ['肖芒', '姜晓华', '董志怀', '司怡十美', '周森浩', '金茂']
 
 prelastSurgeryList = prelastSurgeryList[[
     'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
@@ -378,12 +378,14 @@ with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
     worksheet.set_column('K:K', 12, format1)  # Phone
     worksheet.set_column('L:L', 10, format1)  # AppOperativeDate
     worksheet.set_column('M:M', 10, format1)  # arrangedate
-    worksheet.set_column('N:N', 10, format1)  # Doctor
-    worksheet.set_column('O:O', 10, format1)  # bedid
-    worksheet.set_column('P:P', 10, format1)  # plandate
-    worksheet.set_column('Q:Q', 50, format2)  # arroperp
-    worksheet.set_column('R:R', 20, format2)  # remark
-    worksheet.set_column('S:S', 10, format1)  # cdonm
-    worksheet.set_column('T:T', 10, format1)  # aneask
-    worksheet.set_column('U:U', 10, format1)  # agentnm
-    worksheet.set_column('V:V', 10, format1)  # askdate
+    worksheet.set_column('N:N', 10, format1)  # NoticeFlag
+    worksheet.set_column('O:O', 10, format1)  # noticeRecord
+    worksheet.set_column('P:P', 10, format1)  # Doctor
+    worksheet.set_column('Q:Q', 10, format1)  # bedid
+    worksheet.set_column('R:R', 10, format1)  # plandate
+    worksheet.set_column('S:S', 50, format2)  # arroperp
+    worksheet.set_column('T:T', 20, format2)  # remark
+    worksheet.set_column('U:U', 10, format1)  # cdonm
+    worksheet.set_column('V:V', 10, format1)  # aneask
+    worksheet.set_column('W:W', 10, format1)  # agentnm
+    worksheet.set_column('X:X', 10, format1)  # askdate

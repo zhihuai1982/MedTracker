@@ -1574,15 +1574,17 @@ def surgical_arrange(pList, attending, aName):
         worksheet.set_column('K:K', 12, format1)  # Phone
         worksheet.set_column('L:L', 10, format1)  # AppOperativeDate
         worksheet.set_column('M:M', 10, format1)  # arrangedate
-        worksheet.set_column('N:N', 10, format1)  # Doctor
-        worksheet.set_column('O:O', 10, format1)  # bedid
-        worksheet.set_column('P:P', 10, format1)  # plandate
-        worksheet.set_column('Q:Q', 50, format2)  # arroperp
-        worksheet.set_column('R:R', 20, format2)  # remark
-        worksheet.set_column('S:S', 10, format1)  # cdonm
-        worksheet.set_column('T:T', 10, format1)  # aneask
-        worksheet.set_column('U:U', 10, format1)  # agentnm
-        worksheet.set_column('V:V', 10, format1)  # askdate
+        worksheet.set_column('N:N', 10, format1)  # NoticeFlag
+        worksheet.set_column('O:O', 10, format1)  # noticeRecord
+        worksheet.set_column('P:P', 10, format1)  # Doctor
+        worksheet.set_column('Q:Q', 10, format1)  # bedid
+        worksheet.set_column('R:R', 10, format1)  # plandate
+        worksheet.set_column('S:S', 50, format2)  # arroperp
+        worksheet.set_column('T:T', 20, format2)  # remark
+        worksheet.set_column('U:U', 10, format1)  # cdonm
+        worksheet.set_column('V:V', 10, format1)  # aneask
+        worksheet.set_column('W:W', 10, format1)  # agentnm
+        worksheet.set_column('X:X', 10, format1)  # askdate
 
     def highlight_upcomingSurgeryDate(row):
         if pd.notnull(row['AppOperativeDate']) and pd.to_datetime(row['AppOperativeDate']).date() == upcomingSurgeryDate:
@@ -1617,7 +1619,7 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col8',
             'props': [('width', '30px')]},            # PatientSex
         {'selector': 'th.col_heading.level0.col9',
-            'props': [('width', '40px')]},            # PatientAge
+            'props': [('width', '50px')]},            # PatientAge
         {'selector': 'th.col_heading.level0.col10',
             'props': [('width', '110px')]},            # PatientPhone
         {'selector': 'th.col_heading.level0.col10',
@@ -1625,22 +1627,26 @@ def surgical_arrange(pList, attending, aName):
         {'selector': 'th.col_heading.level0.col12',
             'props': [('width', '100px')]},            # arrangedate
         {'selector': 'th.col_heading.level0.col13',
-            'props': [('width', '100px')]},            # Doctor
+            'props': [('width', '100px')]},            # NoticeFlag
         {'selector': 'th.col_heading.level0.col14',
-            'props': [('width', '100px')]},            # bedid
+            'props': [('width', '100px')]},            # noticeRecord
         {'selector': 'th.col_heading.level0.col15',
-            'props': [('width', '100px')]},             # plandate
+            'props': [('width', '100px')]},            # Doctor
         {'selector': 'th.col_heading.level0.col16',
-            'props': [('width', '200px')]},             # preprop
+            'props': [('width', '100px')]},            # bedid
         {'selector': 'th.col_heading.level0.col17',
-            'props': [('width', '200px')]},             # remark
+            'props': [('width', '100px')]},             # plandate
         {'selector': 'th.col_heading.level0.col18',
-            'props': [('width', '40px')]},             # cdonm
+            'props': [('width', '200px')]},             # preprop
         {'selector': 'th.col_heading.level0.col19',
-            'props': [('width', '60px')]},             # aneask
+            'props': [('width', '200px')]},             # remark
         {'selector': 'th.col_heading.level0.col20',
-            'props': [('width', '60px')]},             # agentnm
+            'props': [('width', '40px')]},             # cdonm
         {'selector': 'th.col_heading.level0.col21',
+            'props': [('width', '60px')]},             # aneask
+        {'selector': 'th.col_heading.level0.col22',
+            'props': [('width', '60px')]},             # agentnm
+        {'selector': 'th.col_heading.level0.col23',
             'props': [('width', '100px')]}             # askdate
     ]
 

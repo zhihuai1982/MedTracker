@@ -74,6 +74,9 @@ pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['admda
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by='bedid', ascending=False)
 
+# pList 删除 mrn 为 33565 的行
+# pList = pList[pList['mrn'] != 33565]
+
 # pList = pList.iloc[:1]
 
 # %%
@@ -196,6 +199,8 @@ pContent += "<div class='table_container'> " + arrangeListHtml + "</div>\n"
 
 # 筛选出rj_df里 Isroom为“日间“的列
 rj_df = arrangeList[arrangeList['Isroom'] == '日间'].copy()
+
+# rj_df = rj_df.iloc[0:1]
 
 # rj_df 删除mrn列与pList的mrn相同的行
 rj_df = rj_df[~rj_df['mrn'].isin(pList['mrn'])]
