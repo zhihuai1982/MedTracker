@@ -27,7 +27,7 @@ for item in hpList:
 # %%
 # 获取trello列表
 
-tBoardId = "655c91ee0b0743282fcd85fe"
+tBoardId = "677a48e65ad0abf1e767ab41"
 
 url = f"https://api.trello.com/1/boards/{tBoardId}/lists"
 

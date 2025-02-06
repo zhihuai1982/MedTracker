@@ -1,5 +1,7 @@
 surgical-records/
 test/
 __pycache__/
-
-single-list.xlsx
+poetry.lock
+response_notify.json
+response.json
+test.py

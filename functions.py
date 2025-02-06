@@ -1363,7 +1363,7 @@ def surgical_arrange_Xiao(pList, attending, aName):
             prelastSurgeryDate_str}"
     ).json())
 
-    surgeons = ['肖芒', '姜晓华', '董志怀', '周森浩']
+    surgeons = ['肖芒', '姜晓华', '董志怀', '齐杰']
 
     prelastSurgeryList = prelastSurgeryList[[
         'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]

@@ -29,7 +29,7 @@ trelloheaders = {
 
 tpListRaw = requests.request(
     "GET",
-    "https://api.trello.com/1/boards/655c91ee0b0743282fcd85fe/lists",
+    "https://api.trello.com/1/boards/677a48e65ad0abf1e767ab41/lists",
     headers=trelloheaders,
     params=query,
     verify=False,
@@ -93,10 +93,10 @@ for index, row in pList.iterrows():
     pContent += trello_note(row['id'], "together")
 
 pContent += "<!-- wp:heading -->\n<h4 class='wp-block-heading'>其他备注</h4>\n<!-- /wp:heading -->\n"
-pContent += trello_note("655c9b555dc15db6beb5da79", "other")
+pContent += trello_note("677a49e317fc67a0109fbd1f", "other")
 pContent += f"""
         <form class="myForm">
-        <input type="hidden" class="list_id" value="655c9b555dc15db6beb5da79">
+        <input type="hidden" class="list_id" value="677a49e317fc67a0109fbd1f">
         <input type="text" class="name" name="name", style="width: 100%; height: 70px; margin-bottom: 10px;"><br>
         <input type="submit" value="Submit" style="  display: block; margin-left: auto;">
         </form>
