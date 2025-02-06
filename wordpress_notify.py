@@ -29,7 +29,7 @@ trelloheaders = {
 
 tpListRaw = requests.request(
     "GET",
-    "https://api.trello.com/1/boards/655c91ee0b0743282fcd85fe/lists",
+    "https://api.trello.com/1/boards/677a48e65ad0abf1e767ab41/lists",
     headers=trelloheaders,
     params=query,
     verify=False,

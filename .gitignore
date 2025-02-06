@@ -1,3 +1,7 @@
 surgical-records/
 test/
 __pycache__/
+poetry.lock
+response_notify.json
+response.json
+test.py
