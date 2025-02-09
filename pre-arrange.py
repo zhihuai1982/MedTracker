@@ -22,7 +22,7 @@ trelloheaders = {
 
 tpListRaw = requests.request(
     "GET",
-    "https://api.trello.com/1/boards/655c91ee0b0743282fcd85fe/lists",
+    "https://api.trello.com/1/boards/677a48e65ad0abf1e767ab41/lists",
     headers=trelloheaders,
     params=query,
     verify=False,
@@ -133,6 +133,10 @@ surgeryScheduleDF = surgeryScheduleDF[['PatientName',  'PatientID',  'Isroom', '
 # 删除bookList的 NoticeFlag为“取消”的行
 surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF['NoticeFlag'] != '取消']
 
+# 删除 drremark 列中包含 “ignore” 的行
+surgeryScheduleDF = surgeryScheduleDF[~surgeryScheduleDF['drremark'].str.contains(
+    "ignore", na=False)]
+
 # arrangeListdf.to_excel(
 #     f"D:\\working-sync\\手术通知\\预约清单-{nextToDay_str}-{aName}.xlsx", index=False)
 
@@ -163,7 +167,7 @@ prelastSurgeryList = pd.DataFrame(requests.get(
         prelastSurgeryDate_str}"
 ).json())
 
-surgeons = ['肖芒', '姜晓华', '董志怀', '司怡十美', '周森浩', '金茂']
+surgeons = ['肖芒', '董志怀', '齐杰']
 
 prelastSurgeryList = prelastSurgeryList[[
     'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
@@ -365,23 +369,23 @@ with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
     format2 = workbook.add_format({'text_wrap': True, 'valign': 'vcenter'})
 
     # 设置列宽度
-    worksheet.set_column('A:A', 5, format1)  # room
-    worksheet.set_column('B:B', 5, format1)  # cdo
-    worksheet.set_column('C:C', 10, format1)  # pname
-    worksheet.set_column('D:D', 10, format1)  # mrn
-    worksheet.set_column('E:E', 5, format1)  # Isroom
-    worksheet.set_column('F:F', 20, format2)  # diag
-    worksheet.set_column('G:G', 50, format2)  # drremark
-    worksheet.set_column('H:H', 50, format2)   # operp
-    worksheet.set_column('I:I', 5, format1)   # Sex
-    worksheet.set_column('J:J', 5, format1)  # Age
-    worksheet.set_column('K:K', 12, format1)  # Phone
-    worksheet.set_column('L:L', 10, format1)  # AppOperativeDate
-    worksheet.set_column('M:M', 10, format1)  # arrangedate
-    worksheet.set_column('N:N', 10, format1)  # NoticeFlag
-    worksheet.set_column('O:O', 10, format1)  # noticeRecord
-    worksheet.set_column('P:P', 10, format1)  # Doctor
-    worksheet.set_column('Q:Q', 10, format1)  # bedid
+    worksheet.set_column('A:A', 10, format1)  # bedid
+    worksheet.set_column('B:B', 5, format1)  # room
+    worksheet.set_column('C:C', 5, format1)  # cdo
+    worksheet.set_column('D:D', 10, format1)  # pname
+    worksheet.set_column('E:E', 10, format1)  # mrn
+    worksheet.set_column('F:F', 5, format1)  # Isroom
+    worksheet.set_column('G:G', 20, format2)  # diag
+    worksheet.set_column('H:H', 50, format2)  # drremark
+    worksheet.set_column('I:I', 50, format2)  # operp
+    worksheet.set_column('J:J', 5, format1)  # Sex
+    worksheet.set_column('K:K', 5, format1)  # Age
+    worksheet.set_column('L:L', 12, format1)  # Phone
+    worksheet.set_column('M:M', 10, format1)  # AppOperativeDate
+    worksheet.set_column('N:N', 10, format1)  # arrangedate
+    worksheet.set_column('O:O', 10, format1)  # NoticeFlag
+    worksheet.set_column('P:P', 10, format1)  # noticeRecord
+    worksheet.set_column('Q:Q', 10, format1)  # Doctor
     worksheet.set_column('R:R', 10, format1)  # plandate
     worksheet.set_column('S:S', 50, format2)  # arroperp
     worksheet.set_column('T:T', 20, format2)  # remark
