@@ -1333,6 +1333,10 @@ def surgical_arrange(pList, attending, aName):
     # 删除bookList的 NoticeFlag为“取消”的行
     surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF['NoticeFlag'] != '取消']
 
+    # 删除 drremark 列中包含 “ignore” 的行
+    surgeryScheduleDF = surgeryScheduleDF[~surgeryScheduleDF['drremark'].str.contains(
+        "ignore", na=False)]
+    
     # arrangeListdf.to_excel(
     #     f"D:\\working-sync\\手术通知\\预约清单-{nextToDay_str}-{aName}.xlsx", index=False)
 
