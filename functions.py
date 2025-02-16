@@ -1344,7 +1344,7 @@ def surgical_arrange(pList, attending, aName):
         columns={'PatientID': 'mrn', 'PatientName': 'pname', 'Diagnose': 'diag'}, inplace=True)
 
     surgeryScheduleDF.loc[:, 'mrn'] = surgeryScheduleDF['mrn'].astype(str)
-    pList.loc[:, 'mrn'] = pList['mrn'].astype(str)
+    pList['mrn'] = pList['mrn'].astype(str)
 
     # 将surgeryScheduleDF和pList根据mrn列合并
     scheduleList = surgeryScheduleDF.merge(
@@ -1373,7 +1373,8 @@ def surgical_arrange(pList, attending, aName):
         'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
     prelastSurgeryList = prelastSurgeryList[prelastSurgeryList['name'].isin(
         surgeons)]
-    prelastSurgeryList.loc[:, 'mrn'] = prelastSurgeryList['mrn'].astype(str)
+    prelastSurgeryList['mrn'] = prelastSurgeryList['mrn'].astype(str)
+
 
     lastSurgeryList = pd.DataFrame(requests.get(
         f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
@@ -1383,7 +1384,8 @@ def surgical_arrange(pList, attending, aName):
     lastSurgeryList = lastSurgeryList[[
         'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
     lastSurgeryList = lastSurgeryList[lastSurgeryList['name'].isin(surgeons)]
-    lastSurgeryList.loc[:, 'mrn'] = lastSurgeryList['mrn'].astype(str)
+    lastSurgeryList['mrn'] = lastSurgeryList['mrn'].astype(str)
+
 
     upcomingSurgeryList = pd.DataFrame(requests.get(
         f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
