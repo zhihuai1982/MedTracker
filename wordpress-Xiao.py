@@ -75,7 +75,7 @@ pList['h2name'] = pList['bedid'].astype(str)+'-'+pList['pname']+'-'+pList['admda
 pList = pList.sort_values(by='bedid', ascending=False)
 
 # pList 删除 mrn 为 33565 的行
-# pList = pList[pList['mrn'] != 33565]
+# pList = pList[pList['mrn'] != 4009984]
 
 # pList = pList.iloc[:1]
 
@@ -281,4 +281,15 @@ data_to_save = {
 # Save the data to a JSON file
 with open('response.json', 'w') as f:
     json.dump(data_to_save, f)
+
+# %%
+
+import requests
+
+try:
+    requests.get("https://hc-ping.com/6387cb87-6181-4296-ae1d-9ee4c9713501", timeout=10)
+except requests.RequestException as e:
+    # Log ping failure here...
+    print("Ping failed: %s" % e)
+
 # %%
