@@ -1177,6 +1177,11 @@ def trello_note(trelloListId, place, notify="false"):
                         // 在chrome浏览器里显示card内容
                         // console.log(card);
 
+                        // 如果 card.dueComplete 为 true，则跳过本次循环
+                        if (card.dueComplete) {{
+                            return;
+                        }}
+
                         var name = card.name; // 获取每个card对象的name属性值
                         var start = card.start;
                         var due = card.due;
