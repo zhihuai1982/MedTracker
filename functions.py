@@ -1268,7 +1268,7 @@ def trello_note(trelloListId, place, notify="false"):
 # %%
 
 ####################
-# 肖组手术安排
+# 周组手术安排
 ####################
 
 
@@ -1317,15 +1317,15 @@ def surgical_arrange(pList, attending, aName):
     # arrange surgery
     schedule_unRegister = requests.get(
         f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            prelastSurgeryDate_str}/{nextSurgeyDate_str}/1/33/{attending}/"
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/1/33A/{attending}/"
     ).json()
     schedule_notYetAdmintted = requests.get(
         f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            prelastSurgeryDate_str}/{nextSurgeyDate_str}/5/33/{attending}/"
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/5/33A/{attending}/"
     ).json()
     schedule_alreadyAdmintted = requests.get(
         f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
-            prelastSurgeryDate_str}/{nextSurgeyDate_str}/7/33/{attending}/"
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/7/33A/{attending}/"
     ).json()
 
     # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
@@ -1356,7 +1356,7 @@ def surgical_arrange(pList, attending, aName):
         pList[['mrn', 'bedid']], on=['mrn'], how="left")
 
     # 删除 schdeuleList 里 dohoscode为 钱塘院区 的行
-    scheduleList = scheduleList[scheduleList['dohoscode'] != '钱塘院区']
+    # scheduleList = scheduleList[scheduleList['dohoscode'] != '钱塘院区']
 
     scheduleList.loc[:, 'AppointmentIn'] = scheduleList['AppointmentIn'].str.replace(
         "T00:00:00", "")
@@ -1368,11 +1368,11 @@ def surgical_arrange(pList, attending, aName):
     # %%
 
     prelastSurgeryList = pd.DataFrame(requests.get(
-        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/5/A002/{
             prelastSurgeryDate_str}"
     ).json())
 
-    surgeons = ['肖芒', '姜晓华', '董志怀', '齐杰']
+    surgeons = ['周明光', '董志怀']
 
     prelastSurgeryList = prelastSurgeryList[[
         'mrn', 'pname', 'room', 'cdo', 'operp', 'name', 'plandate']]
@@ -1382,7 +1382,7 @@ def surgical_arrange(pList, attending, aName):
 
 
     lastSurgeryList = pd.DataFrame(requests.get(
-        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/5/A002/{
             lastSurgeryDate_str}"
     ).json())
 
@@ -1393,7 +1393,7 @@ def surgical_arrange(pList, attending, aName):
 
 
     upcomingSurgeryList = pd.DataFrame(requests.get(
-        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+        f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/5/A002/{
             upcomingSurgeryDate_str}"
     ).json())
 
@@ -1444,7 +1444,7 @@ def surgical_arrange(pList, attending, aName):
             "ENDDATE": f"{datetime.date.today() + datetime.timedelta(days=7)} 23:59:59",
             "opdept": "",
             "dohoscode": "",
-            "DEPTID": "33"
+            "DEPTID": "33A"
         },
         "logInfo": {
             "stay": None,
@@ -1453,7 +1453,7 @@ def surgical_arrange(pList, attending, aName):
             "loginUserId": "73298",
             "loginUserNm": "董志怀",
             "loginHosCode": "A001",
-            "loginDeptId": "33",
+            "loginDeptId": "33A",
             "loginDeptNm": "耳鼻咽喉头颈外科",
             "loginPassword": "0",
             "loginDpower": None,
@@ -1490,7 +1490,7 @@ def surgical_arrange(pList, attending, aName):
             "computerName": None,
             "doctorDept": None,
             "loginBrlx": "",
-            "loginMedGroup": "30259",
+            "loginMedGroup": "30047",
             "isHemodialysis": False,
             "deptHemodialysis": "30",
             "isAttending": False,
@@ -1526,7 +1526,7 @@ def surgical_arrange(pList, attending, aName):
         preArrangedf = preArrangedf[['mrn', 'pname',
                                      'operp', 'remark', 'cdonm', 'aneask', 'agentnm', 'askdate', 'drpname']]
 
-        # 筛选出 drpname 列包含“肖芒”的行
+        # 筛选出 drpname 列包含drpname的行
         preArrangedf = preArrangedf[preArrangedf['drpname'] == aName]
         # 删除 drpname 列
         preArrangedf.drop(columns='drpname', inplace=True)
@@ -1711,7 +1711,7 @@ def inout(mrn, series, idList, query):
             "loginUserId": "73298",
             "loginUserNm": "董志怀",
             "loginHosCode": "A001",
-            "loginDeptId": "33",
+            "loginDeptId": "33A",
             "loginDeptNm": "耳鼻咽喉头颈外科",
             "loginPassword": "0",
             "loginDpower": None,
@@ -1748,7 +1748,7 @@ def inout(mrn, series, idList, query):
             "computerName": None,
             "doctorDept": None,
             "loginBrlx": "",
-            "loginMedGroup": "30259",
+            "loginMedGroup": "30047",
             "isHemodialysis": False,
             "deptHemodialysis": "30",
             "isAttending": False,
