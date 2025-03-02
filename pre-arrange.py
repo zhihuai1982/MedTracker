@@ -348,6 +348,11 @@ arrangeList = arrangeList.sort_values(
 arrangeList.loc[:, 'room'] = arrangeList['room'].str.replace('nan', '')
 arrangeList.loc[:, 'cdo'] = arrangeList['cdo'].str.replace('nan', '')
 
+# 将 bedid 列移到第一列
+cols = arrangeList.columns.tolist()
+cols.insert(0, cols.pop(cols.index('bedid')))
+arrangeList = arrangeList[cols]
+
 # %%
 
 # 定义文件名
