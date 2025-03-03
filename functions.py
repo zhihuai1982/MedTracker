@@ -1377,7 +1377,8 @@ def trello_note(trelloListId, place, notify="false"):
                     cards.forEach(function (card) {{
 
                         // 在chrome浏览器里显示card内容
-                        // console.log(card);
+                        // console.log('id:',card.id);
+                        // console.log('idattch:',card.idAttachmentCover);
 
                         // 如果 card.dueComplete 为 true，则跳过本次循环
                         if (card.dueComplete) {{
@@ -1448,7 +1449,20 @@ def trello_note(trelloListId, place, notify="false"):
                         }}
 
                         var shortUrl = card.shortUrl;
-                        $('#trello-content-{place}-{trelloListId}').append("<li style='background-color: " + color + ";'><a href='"+ shortUrl+"' target='_blank'>"+name + " " + start_days + due_days + "</a></li>"); // 将每个card的name属性显示在页面上
+                        var id = card.id;
+                        var idAttachmentCover = card.idAttachmentCover;
+
+                        // 如果name为"image.png",则赋值变量 content 为 "https://trello.com/1/cards/{{id}}/attachments/{{idAttachmentCover}}/previews/preview/download/image.webp"
+                        // 否则 content 为 name + " " + start_days + due_days
+
+                        var content = (name === "image.png") 
+                            ? `<img src="https://trello.com/1/cards/${{id}}/attachments/${{idAttachmentCover}}/previews/preview/download/image.webp" 
+                                  style="max-width: 200px; max-height: 150px; display: block;" 
+                                  alt="Trello attachment" 
+                                  loading="lazy">` 
+                            : name + " " + start_days + due_days;
+                        
+                        $('#trello-content-{place}-{trelloListId}').append("<li style='background-color: " + color + ";'><a href='"+ shortUrl+"' target='_blank'>"+ content + "</a></li>");
                     }});
                 }} else {{
                     $('#trello-content-1').append("Ajax请求失败")
