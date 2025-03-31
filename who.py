@@ -38,6 +38,7 @@ combined_df = pd.DataFrame(combined_list)[
         "noticeRecord",
         "AppointmentIn",
         "AppOperativeDate",
+        "ApplicationDate",
         "arrangedate",
         "dohoscode",
         "PatientPhone",
@@ -109,5 +110,33 @@ for attending, group in attending_stats:
             output.append(f"*********{diag} - {count}")
 
 print("\n".join(output))
+
+# %%
+# combined_df 中的 ApplicationDate 格式为"2025-03-17T08:11:44", 筛选出当天日期的行
+today = datetime.date.today().strftime("%Y-%m-%d")
+# today = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+today_rows = combined_df[combined_df["ApplicationDate"].str.startswith(today)]
+
+# ... existing code ...
+
+# 使用today_rows代替combined_df进行当日统计
+attending_stats_today = today_rows.groupby("Attending")
+output_today = []
+for attending, group in attending_stats_today:
+    output_today.append(f"【{attending}】")
+
+    # 统计逻辑保持相同结构
+    doctor_total = group.groupby("Doctor").size()
+    doctor_diag = group.groupby(["Doctor", "Diagnose"]).size()
+
+    for doctor in doctor_total.index:
+        output_today.append(f"{doctor}-{doctor_total[doctor]}")
+        diag_counts = doctor_diag.xs(doctor, level="Doctor")
+        for diag, count in diag_counts.items():
+            output_today.append(f"*********{diag} - {count}")
+
+print("\n当日数据统计结果：\n" + "\n".join(output_today))
+
+# ... existing code ...
 
 # %%

@@ -147,7 +147,7 @@ def get_lab_results(mrn, duration):
         if "血气" in item["checkitem"]:
             item["checkitem"] = "血气检查"
 
-    # 根据hLabList里的bgsj筛选出大于当前日期-duration（天）的数据
+    # 根据hLabList里的dodate筛选出大于当前日期-duration（天）的数据
     hLabListLimit = [
         item
         for item in hLabList
@@ -179,51 +179,49 @@ def get_lab_results(mrn, duration):
     # 合并hLabListLimit和hLabListSelect
     hLabListTotal = hLabListLimit + hLabListSelect
 
-    if not hLabListTotal:
-        return "No match found"
-
     limitLabRes = []
     for lab in hLabListLimit:
         url = f"http://20.21.1.224:5537/api/api/LisReport/GetLisReportDetail/{
             mrn}/{lab['dodate']}/{lab['specimenid']}/{lab['domany']}"
         labRes = requests.get(url).json()
         for item in labRes:
-            # item['bgsj'] = lab['repdate']
+            # item['dodate'] = lab['repdate']
             item["checkitem"] = lab["checkitem"]
         limitLabRes.extend(labRes)  # 将 labRes 的结果添加到 limitLabRes 列表中
 
+    # %%
     limitDF = pd.DataFrame(limitLabRes)  # 将 limitLabRes 列表转换为 DataFrame
-    # 如果limitDF为空，则拥有'xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj'列的空表
+    # 如果limitDF为空，则拥有'xmmc', 'jg', 'jgts', 'dodate', 'checkitem', 'ckqj'列的空表
     if limitDF.empty:
         limitDF = pd.DataFrame(
-            columns=["xmmc", "jg", "zdbz", "bgsj", "checkitem", "ckqj"]
+            columns=["xmmc", "jg", "jgts", "dodate", "checkitem", "ckqj"]
         )
     else:
         limitDF = limitDF[
-            ["xmmc", "jg", "zdbz", "bgsj", "checkitem", "ckqj"]
+            ["xmmc", "jg", "jgts", "dodate", "checkitem", "ckqj"]
         ]  # 选择需要的列
 
     def process_group(group):
-        if group["zdbz"].replace("", pd.NA).isnull().all():  # 如果 'zdbz' 列都是空白
+        if group["jgts"].replace("", pd.NA).isnull().all():  # 如果 'jgts' 列都是空白
             return pd.DataFrame(
                 [
                     {
                         "xmmc": "",
                         "jg": "(-)",
-                        "zdbz": "",
-                        "bgsj": group["bgsj"].iloc[0],
+                        "jgts": "",
+                        "dodate": group["dodate"].iloc[0],
                         "checkitem": group["checkitem"].iloc[0],
                         "ckqj": "",
                     }
                 ]
             )
         else:
-            # 删除 'zdbz' 为空白的行
-            return group[group["zdbz"].replace("", pd.NA).notnull()]
+            # 删除 'jgts' 为空白的行
+            return group[group["jgts"].replace("", pd.NA).notnull()]
 
-    # checkitem修改名字后会重复，所以需要加入bgsj加以区分
+    # checkitem修改名字后会重复，所以需要加入dodate加以区分
     limitDF = (
-        limitDF.groupby(["checkitem", "bgsj"])
+        limitDF.groupby(["checkitem", "dodate"])
         .apply(process_group)
         .reset_index(drop=True)
     )
@@ -234,19 +232,19 @@ def get_lab_results(mrn, duration):
             mrn}/{lab['dodate']}/{lab['specimenid']}/{lab['domany']}"
         labRes = requests.get(url).json()
         for item in labRes:
-            # item['bgsj'] = lab['repdate']
+            # item['dodate'] = lab['repdate']
             item["checkitem"] = lab["checkitem"]
         selectLabRes.extend(labRes)  # 将 labRes 的结果添加到 limitLabRes 列表中
 
     selectDF = pd.DataFrame(selectLabRes)  # 将 limitLabRes 列表转换为 DataFrame
-    # 如果 selectDF 为空，则拥有'xmmc', 'jg', 'zdbz', 'bgsj', 'checkitem', 'ckqj'列的空表
+    # 如果 selectDF 为空，则拥有'xmmc', 'jg', 'jgts', 'dodate', 'checkitem', 'ckqj'列的空表
     if selectDF.empty:
         selectDF = pd.DataFrame(
-            columns=["xmmc", "jg", "zdbz", "bgsj", "checkitem", "ckqj"]
+            columns=["xmmc", "jg", "jgts", "dodate", "checkitem", "ckqj"]
         )
     else:
         selectDF = selectDF[
-            ["xmmc", "jg", "zdbz", "bgsj", "checkitem", "ckqj"]
+            ["xmmc", "jg", "jgts", "dodate", "checkitem", "ckqj"]
         ]  # 选择需要的列
 
     # 创建一个包含重点检验结果名称的列表
@@ -269,7 +267,7 @@ def get_lab_results(mrn, duration):
         "D-二聚体(D-Di)",
     ]
 
-    # 删除df中 bgsj 小于当前日期-duration天 且 xmmc 不在 important_tests 中的行
+    # 删除df中 dodate 小于当前日期-duration天 且 xmmc 不在 important_tests 中的行
     selectDF = selectDF[selectDF["xmmc"].isin(important_tests)]
 
     # %%
@@ -277,17 +275,21 @@ def get_lab_results(mrn, duration):
     # 合并 limitDF 和 selectDF
     df = pd.concat([limitDF, selectDF], ignore_index=True)
 
-    # 将df按照bgsj由大到小逆向排序
-    df = df.sort_values(by="bgsj", ascending=False)
-    # 将bgsj转换成日期格式
-    df["bgsj"] = pd.to_datetime(df["bgsj"], format="mixed").dt.strftime("%Y-%m-%d")
+    # 将df按照dodate由大到小逆向排序
+    df = df.sort_values(by="dodate", ascending=False)
+
+    # 将dodate转换成日期格式（YYYYMMDD → YYYY-MM-DD）
+    df["dodate"] = pd.to_datetime(df["dodate"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
+
+    # 将dodate转换成日期格式
+    # df["dodate"] = pd.to_datetime(df["dodate"], format="mixed").dt.strftime("%Y-%m-%d")
 
     df.rename(
         columns={
             "xmmc": "项目名称",
             "jg": "结果",
-            "zdbz": "R",
-            "bgsj": "检验日期",
+            "jgts": "R",
+            "dodate": "检验日期",
             "checkitem": "检验项目",
             "ckqj": "参考范围",
         },

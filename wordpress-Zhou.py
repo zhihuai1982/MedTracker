@@ -89,18 +89,20 @@ pList["h2name"] = (
 # pList 根据  bedid 列逆序排列
 # pList = pList.sort_values(by="bedid", ascending=True)
 
+
 # 自定义排序规则（W后>90的按升序排在前面）
 def create_sort_key(bedid):
     try:
-        prefix, suffix = bedid.split('W')
+        prefix, suffix = bedid.split("W")
         suffix_num = int(suffix)
         # 返回元组：前缀 | 是否>90（反向排序） | 实际数值
-        return (prefix + 'W', -int(suffix_num > 90), suffix_num)
+        return (prefix + "W", -int(suffix_num > 90), suffix_num)
     except:
         return (bedid, 0, 0)
 
-pList['sort_key'] = pList['bedid'].apply(create_sort_key)
-pList = pList.sort_values(by='sort_key').drop(columns=['sort_key'])
+
+pList["sort_key"] = pList["bedid"].apply(create_sort_key)
+pList = pList.sort_values(by="sort_key").drop(columns=["sort_key"])
 
 print(pList)
 
@@ -307,7 +309,7 @@ else:
     todayPostID = ""
 
 # todayPostID = ''
-url = f"https://www.digitalnomad.host:996/wp-json/wp/v2/posts/{todayPostID}"
+url = f"https://wordpress.digitalnomad.host:1501/wp-json/wp/v2/posts/{todayPostID}"
 post = {
     "title": f"患者病情简报 - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
     "status": "publish",
