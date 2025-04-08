@@ -937,9 +937,9 @@ def consultation(hDocuList):
 
             # 每个表格都是一个DataFrame，你可以通过索引来访问它们
             data = {
-                "会诊科室": "A" + tables[2].iloc[2, 1],
-                "会诊医生": tables[2].iloc[1, 1],
-                "会诊时间": tables[2].iloc[1, 3],
+                "会诊科室": "A" + str(tables[2].iloc[2, 1]),
+                "会诊医生": str(tables[2].iloc[1, 1]),
+                "会诊时间": str(tables[2].iloc[1, 3]),
                 "会诊意见": "".join(tables[3].iloc[:, 0]),
             }
 
@@ -960,7 +960,7 @@ def consultation(hDocuList):
 
             # 每个表格都是一个DataFrame，你可以通过索引来访问它们
             data = {
-                "会诊科室": "R" + tables[2].iloc[2, 2],
+                "会诊科室": "R" + str(tables[2].iloc[2, 2]),
                 "会诊医生": tables[2].iloc[2, 0].split("：")[1].strip(),
                 "会诊时间": tables[4].iloc[0, 3],
                 "会诊意见": "".join(tables[3].iloc[2:, 0]).replace("注意事项：", ""),
