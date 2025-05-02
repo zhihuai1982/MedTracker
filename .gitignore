@@ -10,3 +10,4 @@ drgs-fee/grouped_stats_summary.xlsx
 drgs-fee/commonDRGsGroups.xlsx
 pyproject.toml
 poetry.lock
+response.json

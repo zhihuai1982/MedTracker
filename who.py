@@ -148,10 +148,10 @@ header = {"Authorization": "Basic " + token.decode("utf-8")}
 
 # 构建文章内容
 wp_content = (
-    "<!-- wp:heading {'level':1} --><h1>手术统计报告</h1><!-- /wp:heading -->\n"
+    "<!-- wp:heading {'level':1} --><h1>预约统计报告</h1><!-- /wp:heading -->\n"
 )
 wp_content += (
-    "<!-- wp:heading --><h2>本周统计</h2><!-- /wp:heading -->\n<pre>"
+    "<!-- wp:heading --><h2>月度统计</h2><!-- /wp:heading -->\n<pre>"
     + "\n".join(stat_report)
     + "</pre>\n"
 )
@@ -180,7 +180,7 @@ post_url = (
     f"https://wordpress.digitalnomad.host:1501/wp-json/wp/v2/posts/{today_post_id}"
 )
 post_data = {
-    "title": f"手术统计 - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+    "title": f"Daily Report - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
     "status": "publish",
     "content": wp_content,
 }

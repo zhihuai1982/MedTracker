@@ -104,9 +104,9 @@ def create_sort_key(bedid):
 pList["sort_key"] = pList["bedid"].apply(create_sort_key)
 pList = pList.sort_values(by="sort_key").drop(columns=["sort_key"])
 
-print(pList)
+# print(pList)
 
-# pList 删除 mrn 为 33565 的行
+# pList 删除 mrn 为s 33565 的行
 # pList = pList[pList['mrn'] != 4009984]
 
 # pList = pList.iloc[:1]
