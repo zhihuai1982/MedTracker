@@ -118,6 +118,9 @@ pContent = ""  # 选择要发布的内容，drgs或appointment
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>DRGS 数据</h1>\n<!-- /wp:heading -->\n"
 
 
+# 在循环开始前添加汇总数据结构
+summary_data = []
+
 for index, row in pList.iterrows():
     # 获取病历文书列表
     # http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{mrn}/{series}/emr
@@ -207,6 +210,59 @@ for index, row in pList.iterrows():
 
     if surgery_cost:
         pContent += f"手术费总额：{surgery_cost} 元<br>"
+
+    # 在获取手术费用后添加数据收集（在 surgery_cost 计算之后）
+    summary_entry = {
+        "床号": row["bedid"],
+        "姓名": row["pname"],
+        "诊断": row["tdiag"],
+        "医疗总费用": 0,
+        "DRG倍率": 0,
+        "预计结余": 0,
+        "手术费用": surgery_cost,
+    }
+
+    # 遍历 forecasts 获取 DRGS 数据
+    forecasts = patientInfo.get("data", {}).get("forecastInfoList", [])
+    for forecast in forecasts:
+        # 更新每个 forecast 的数据到汇总表
+        summary_entry.update(
+            {
+                "医疗总费用": forecast.get("ylzfy", ""),
+                "DRG倍率": forecast.get("magnification", 0),
+                "预计结余": forecast.get("feeProfit", 0),
+            }
+        )
+        summary_data.append(summary_entry.copy())  # 使用副本避免数据覆盖
+
+pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>DRGS 汇总表</h1>\n<!-- /wp:heading -->\n"
+
+# 在 DRGS 数据显示后添加表格生成（在 surgery_cost 显示之后）
+# 生成表格 HTML
+if summary_data:
+    pContent += "<br><table style='border-collapse: collapse; width: 100%;'>"
+    pContent += "<tr style='background-color: #f2f2f2;'><th>床号</th><th>姓名</th><th>诊断</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
+
+    for entry in summary_data:  # 取最近添加的数据
+        pContent += f"<tr>"
+        pContent += (
+            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['床号']}</td>"
+        )
+        pContent += (
+            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['姓名']}</td>"
+        )
+        pContent += (
+            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['诊断']}</td>"
+        )
+        pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['医疗总费用']}</td>"
+        pContent += (
+            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['DRG倍率']}</td>"
+        )
+        pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['预计结余']}</td>"
+        pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['手术费用']}</td>"
+        pContent += f"</tr>"
+
+    pContent += "</table><br>"
 
 
 # %%
