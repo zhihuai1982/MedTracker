@@ -159,25 +159,39 @@ for index, row in pList.iterrows():
             pContent += f"┗{diagnosis_name}<br>"  # 添加标识前缀
 
     # 手术名称
+
+    # 添加类型检查确保对象是字典
+    surgery_detail = patientInfo.get("data", {}) or {}
+    surgery_detail = (
+        surgery_detail.get("surgeryDetail", {})
+        if isinstance(surgery_detail, dict)
+        else {}
+    )
+
+    main_surgery = (
+        surgery_detail.get("mainSurgery", {})
+        if isinstance(surgery_detail, dict)
+        else {}
+    )
     surgery_name = (
-        patientInfo.get("data", {})
-        .get("surgeryDetail", {})
-        .get("mainSurgery", {})
-        .get("surgeryName", "")
+        main_surgery.get("surgeryName", "") if isinstance(main_surgery, dict) else ""
     )
     if surgery_name:
         pContent += f"<b>手术：</b><br>{surgery_name}<br>"
 
     # 遍历次要手术列表
     second_surgeries = (
-        patientInfo.get("data", {})
-        .get("surgeryDetail", {})
-        .get("secondSurgeryList", [])
+        surgery_detail.get("secondSurgeryList", [])
+        if isinstance(surgery_detail, dict)
+        else []
     )
-    for surgery in second_surgeries:  # 即使列表不存在/为空也能安全遍历
-        surgery_name = surgery.get("surgeryName")
-        if surgery_name:  # 过滤空值
-            pContent += f"┗{surgery_name}<br>"  # 添加标识前缀
+    for surgery in second_surgeries:
+
+        surgery_name = (
+            surgery.get("surgeryName", "") if isinstance(surgery, dict) else ""
+        )
+        if surgery_name:
+            pContent += f"┗{surgery_name}<br>"
 
     # DRGS 数据
     forecasts = patientInfo.get("data", {}).get("forecastInfoList", [])
@@ -244,7 +258,13 @@ if summary_data:
     pContent += "<tr style='background-color: #f2f2f2;'><th>床号</th><th>姓名</th><th>诊断</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
 
     for entry in summary_data:  # 取最近添加的数据
-        pContent += f"<tr>"
+        # 根据倍率值设置行背景色
+        bg_color = (
+            "#ffcccc"
+            if (float(entry["DRG倍率"]) < 0.4 or float(entry["DRG倍率"]) > 1)
+            else ""
+        )
+        pContent += f"<tr style='background-color: {bg_color}'>"
         pContent += (
             f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['床号']}</td>"
         )
