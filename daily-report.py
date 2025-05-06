@@ -26,12 +26,27 @@ trelloheaders = {"Accept": "application/json"}
 # %%
 # trello上获取患者住院号列表和id列表，并排除其他无关列表
 
-tpListRaw = requests.request(
+# 增加重试机制和超时设置
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+
+# 在查询参数后添加重试配置
+session = requests.Session()
+retries = Retry(
+    total=5,  # 最大重试次数
+    backoff_factor=5,  # 重试间隔
+    status_forcelist=[500, 502, 503, 504, 429],  # 需要重试的状态码
+    allowed_methods=["GET"],  # 仅重试GET请求
+)
+session.mount("https://", HTTPAdapter(max_retries=retries))
+
+tpListRaw = session.request(  # 改用带重试机制的session
     "GET",
     "https://api.trello.com/1/boards/67c42e00d9ad2ce5d8876f0b/lists",
     headers=trelloheaders,
     params=query,
     verify=False,
+    timeout=(5, 10),  # 添加连接超时(5s)和读取超时(10s)
 ).json()
 
 pattern = r"^[A-Za-z0-9]+-[\u4e00-\u9fa5]+-\d+-.*$"
