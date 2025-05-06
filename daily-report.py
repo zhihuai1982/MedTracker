@@ -194,19 +194,28 @@ for index, row in pList.iterrows():
     if surgery_name:
         pContent += f"<b>手术：</b><br>{surgery_name}<br>"
 
-    # 遍历次要手术列表
+    # 遍历次要手术列表（修复None类型不可迭代问题）
     second_surgeries = (
-        surgery_detail.get("secondSurgeryList", [])
+        surgery_detail.get("secondSurgeryList") or []  # 添加or []处理None情况
         if isinstance(surgery_detail, dict)
         else []
     )
     for surgery in second_surgeries:
-
         surgery_name = (
             surgery.get("surgeryName", "") if isinstance(surgery, dict) else ""
         )
         if surgery_name:
             pContent += f"┗{surgery_name}<br>"
+
+    # 同样修复次要诊断部分的遍历（添加or []）
+    second_diagnoses = (
+        patientInfo.get("data", {}).get("diagnosisDetail", {}).get("secondDiagnosis")
+        or []  # 添加or []处理None情况
+    )
+    for diagnosis in second_diagnoses:
+        diagnosis_name = diagnosis.get("diagnosisName")
+        if diagnosis_name:
+            pContent += f"┗{diagnosis_name}<br>"
 
     # DRGS 数据
     forecasts = patientInfo.get("data", {}).get("forecastInfoList", [])
