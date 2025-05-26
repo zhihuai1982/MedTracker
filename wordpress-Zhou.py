@@ -49,7 +49,8 @@ tpListRaw = session.request(  # 改用带重试机制的session
     timeout=(5, 10),  # 添加连接超时(5s)和读取超时(10s)
 ).json()
 
-pattern = r"^[A-Za-z0-9]+-[\u4e00-\u9fa5]+-\d+-.*$"
+# 修改正则表达式匹配规则（约第48行）
+pattern = r"^[A-Za-z0-9]+-[\w\s]+-\d+-.*$"  # 原为 [\u4e00-\u9fa5]
 
 tpList = [
     {key: d[key] for key in ["id", "name"]}
