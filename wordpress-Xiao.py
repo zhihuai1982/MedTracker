@@ -42,7 +42,7 @@ session.mount("https://", HTTPAdapter(max_retries=retries))
 
 tpListRaw = session.request(  # 改用带重试机制的session
     "GET",
-    "https://api.trello.com/1/boards/67c42e00d9ad2ce5d8876f0b/lists",
+    "https://api.trello.com/1/boards/677a48e65ad0abf1e767ab41/lists",
     headers=trelloheaders,
     params=query,
     verify=False,
@@ -67,7 +67,7 @@ for item in tpList:
 # http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30046/33A/A002
 
 hpListRaw = requests.get(
-    "http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30047/33A/A002",
+    "http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30259/33/A002",
     headers=headers,
 ).json()
 
@@ -131,7 +131,7 @@ pList = pList.sort_values(by="sort_key").drop(columns=["sort_key"])
 
 pContent = ""
 
-pContent += "<!-- wp:heading {'level':1} -->\n<div id='xiao-notes'><h1 class='wp-block-heading'>周组备注</h1></div>\n<!-- /wp:heading -->\n"
+pContent += "<!-- wp:heading {'level':1} -->\n<div id='xiao-notes'><h1 class='wp-block-heading'>肖组备注</h1></div>\n<!-- /wp:heading -->\n"
 
 for index, row in pList.iterrows():
 
@@ -251,7 +251,7 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手�
 
 
 arrangeList, arrangeListHtml, upcomingSurgeryDate_str = surgical_arrange(
-    pList, 30047, "周明光"
+    pList, 30259, "肖芒"
 )
 
 pContent += "<div class='table_container'> " + arrangeListHtml + "</div>\n"

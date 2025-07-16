@@ -6,308 +6,10 @@ import base64
 import pandas as pd
 import datetime
 
-# 导入 functions.py
-from functions import *
-
-# %%
-# trello
-
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36"
-}
-
-query = {
-    "key": "f45b896485c79fe922e7f022a8bc6f71",
-    "token": "ATTAae59e22e7d144839c54a444aa4f24d4f3ede09405b11ace472e773a78a23b0e8F2D629A2",
-}
-
-trelloheaders = {"Accept": "application/json"}
-
-# %%
-# trello上获取患者住院号列表和id列表，并排除其他无关列表
-
-# 增加重试机制和超时设置
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
-
-# 在查询参数后添加重试配置
-session = requests.Session()
-retries = Retry(
-    total=5,  # 最大重试次数
-    backoff_factor=5,  # 重试间隔
-    status_forcelist=[500, 502, 503, 504, 429],  # 需要重试的状态码
-    allowed_methods=["GET"],  # 仅重试GET请求
-)
-session.mount("https://", HTTPAdapter(max_retries=retries))
-
-tpListRaw = session.request(  # 改用带重试机制的session
-    "GET",
-    "https://api.trello.com/1/boards/67c42e00d9ad2ce5d8876f0b/lists",
-    headers=trelloheaders,
-    params=query,
-    verify=False,
-    timeout=(5, 10),  # 添加连接超时(5s)和读取超时(10s)
-).json()
-
-pattern = r"^[A-Za-z0-9]+-[\u4e00-\u9fa5]+-\d+-.*$"
-
-tpList = [
-    {key: d[key] for key in ["id", "name"]}
-    for d in tpListRaw
-    if re.match(pattern, d["name"])
-]
-for item in tpList:
-    item["mrn"] = int(item["name"].split("-")[2])
-    item["tdiag"] = item["name"].split("-")[3]
-
-# %%  住院系统获取患者列表
-
-# 获取患者列表，得到住院号mrn和series
-# http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30046/33A/A002
-
-hpListRaw = requests.get(
-    "http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30047/33A/A002",
-    headers=headers,
-).json()
-
-hpList = [
-    {key: d[key] for key in ["bedid", "pname", "mrn", "series", "diag", "admdays"]}
-    for d in hpListRaw
-]
-
-# # hpList 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天
-# for item in hpList:
-#     item['h2name'] = f"{item['bedid']}-{item['pname']
-#                                         }-{item['mrn']}-{item['admdays']}d-{item['diag']}"
-
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36"
-}
-
-# %%
-#  根据mrn列合并hpList和tplist，保存到pList，要求保存hpList中的所有行，tplist中的id列
-pList = pd.merge(pd.DataFrame(hpList), pd.DataFrame(tpList), on="mrn", how="left")
-
-# 新建一列 h2name，格式为 bedid-pname-mrn-入院admdays天-tdiag
-pList["h2name"] = (
-    pList["bedid"].astype(str)
-    + "-"
-    + pList["pname"]
-    + "-"
-    + pList["admdays"].astype(str)
-    + "d-"
-    + pList["tdiag"]
-    + "-"
-    + pList["mrn"].astype(str)
-)
-
-# pList 根据  bedid 列逆序排列
-# pList = pList.sort_values(by="bedid", ascending=True)
-
-
-# 自定义排序规则（W后>90的按升序排在前面）
-def create_sort_key(bedid):
-    try:
-        prefix, suffix = bedid.split("W")
-        suffix_num = int(suffix)
-        # 返回元组：前缀 | 是否>90（反向排序） | 实际数值
-        return (prefix + "W", -int(suffix_num > 90), suffix_num)
-    except:
-        return (bedid, 0, 0)
-
-
-pList["sort_key"] = pList["bedid"].apply(create_sort_key)
-pList = pList.sort_values(by="sort_key").drop(columns=["sort_key"])
-
-# print(pList)
-
-# pList 删除 mrn 为s 33565 的行
-# pList = pList[pList['mrn'] != 4009984]
-
-# pList = pList.iloc[:1]
 
 # %%
 
 pContent = ""  # 选择要发布的内容，drgs或appointment
-
-pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>DRGS 数据</h1>\n<!-- /wp:heading -->\n"
-
-
-# 在循环开始前添加汇总数据结构
-summary_data = []
-
-for index, row in pList.iterrows():
-    # 获取病历文书列表
-    # http://20.21.1.224:5537/api/api/EmrWd/GetDocumentList/{mrn}/{series}/emr
-
-    print(row["mrn"])
-
-    # 通过 http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid=row["mrn"]-row["series"]-&pageSourceType=THD&hosCode=A002 接口获取患者信息
-    patientInfo = requests.get(
-        f"http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid={row['mrn']}-{row['series']}-&pageSourceType=THD&hosCode=A002",
-        headers=headers,
-    ).json()  # 添加.json()将响应转换为字典
-
-    # 获取 patientInfo 中
-    pContent += f"<!-- wp:heading --><br><h2 class='wp-block-heading' id = '{row['h2name']}'>{
-        row['h2name']}</h2><br><!-- /wp:heading --><br>"
-
-    # 诊断
-    diagnosis_name = (
-        patientInfo.get("data", {})
-        .get("diagnosisDetail", {})
-        .get("mainDiagnosis", {})
-        .get("diagnosisName", "")
-    )
-    if diagnosis_name:
-        pContent += f"<b>诊断：</b><br>{diagnosis_name}<br>"
-
-    # 遍历次要诊断列表
-    second_surgeries = (
-        patientInfo.get("data", {})
-        .get("diagnosisDetail", {})
-        .get("secondDiagnosis", [])
-    )
-    for diagnosis in second_surgeries:  # 即使列表不存在/为空也能安全遍历
-        diagnosis_name = diagnosis.get("diagnosisName")
-        if diagnosis_name:  # 过滤空值
-            pContent += f"┗{diagnosis_name}<br>"  # 添加标识前缀
-
-    # 手术名称
-
-    # 添加类型检查确保对象是字典
-    surgery_detail = patientInfo.get("data", {}) or {}
-    surgery_detail = (
-        surgery_detail.get("surgeryDetail", {})
-        if isinstance(surgery_detail, dict)
-        else {}
-    )
-
-    main_surgery = (
-        surgery_detail.get("mainSurgery", {})
-        if isinstance(surgery_detail, dict)
-        else {}
-    )
-    surgery_name = (
-        main_surgery.get("surgeryName", "") if isinstance(main_surgery, dict) else ""
-    )
-    if surgery_name:
-        pContent += f"<b>手术：</b><br>{surgery_name}<br>"
-
-    # 遍历次要手术列表（修复None类型不可迭代问题）
-    second_surgeries = (
-        surgery_detail.get("secondSurgeryList") or []  # 添加or []处理None情况
-        if isinstance(surgery_detail, dict)
-        else []
-    )
-    for surgery in second_surgeries:
-        surgery_name = (
-            surgery.get("surgeryName", "") if isinstance(surgery, dict) else ""
-        )
-        if surgery_name:
-            pContent += f"┗{surgery_name}<br>"
-
-    # 同样修复次要诊断部分的遍历（添加or []）
-    second_diagnoses = (
-        patientInfo.get("data", {}).get("diagnosisDetail", {}).get("secondDiagnosis")
-        or []  # 添加or []处理None情况
-    )
-    for diagnosis in second_diagnoses:
-        diagnosis_name = diagnosis.get("diagnosisName")
-        if diagnosis_name:
-            pContent += f"┗{diagnosis_name}<br>"
-
-    # DRGS 数据
-    forecasts = patientInfo.get("data", {}).get("forecastInfoList", [])
-    for forecast in forecasts:
-        magnification = forecast.get("magnification", 0)
-        magnification_text = f"倍率：{magnification}"
-
-        # 根据倍率值调整样式
-        if magnification < 0.4 or magnification > 1:
-            magnification_text = f"<span style='color:red; font-weight:bold; font-size:larger;'>{magnification_text}</span>"
-
-        pContent += (
-            f"<b>DRGS：</b><br>"
-            f"drgCode：{forecast.get('drgCode', '')}<br>"
-            f"DRG分组：{forecast.get('drgName', '')}<br>"
-            f"医疗总费用：{forecast.get('ylzfy', '')}<br>"
-            f"预计结算金额：{forecast.get('feeSettle', 0)}<br>"
-            f"预计结余：{forecast.get('feeProfit', 0)}<br>"
-            f"类型：{forecast.get('caseTypeName', '')}<br>"
-            f"{magnification_text}<br><br>"
-        )
-
-    # 手术费用提取
-    fee_items = patientInfo.get("data", {}).get("feeItemList", [])
-
-    surgery_cost = 0
-    for fee_item in fee_items:
-        if fee_item.get("itemName", "") == "手术费":
-            surgery_cost += int(fee_item.get("totalCost", 0))
-
-    if surgery_cost:
-        pContent += f"手术费总额：{surgery_cost} 元<br>"
-
-    # 在获取手术费用后添加数据收集（在 surgery_cost 计算之后）
-    summary_entry = {
-        "床号": row["bedid"],
-        "姓名": row["pname"],
-        "诊断": row["tdiag"],
-        "医疗总费用": 0,
-        "DRG倍率": 0,
-        "预计结余": 0,
-        "手术费用": surgery_cost,
-    }
-
-    # 遍历 forecasts 获取 DRGS 数据
-    forecasts = patientInfo.get("data", {}).get("forecastInfoList", [])
-    for forecast in forecasts:
-        # 更新每个 forecast 的数据到汇总表
-        summary_entry.update(
-            {
-                "医疗总费用": forecast.get("ylzfy", ""),
-                "DRG倍率": forecast.get("magnification", 0),
-                "预计结余": forecast.get("feeProfit", 0),
-            }
-        )
-        summary_data.append(summary_entry.copy())  # 使用副本避免数据覆盖
-
-pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>DRGS 汇总表</h1>\n<!-- /wp:heading -->\n"
-
-# 在 DRGS 数据显示后添加表格生成（在 surgery_cost 显示之后）
-# 生成表格 HTML
-if summary_data:
-    pContent += "<br><table style='border-collapse: collapse; width: 100%;'>"
-    pContent += "<tr style='background-color: #f2f2f2;'><th>床号</th><th>姓名</th><th>诊断</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
-
-    for entry in summary_data:  # 取最近添加的数据
-        # 根据倍率值设置行背景色
-        bg_color = (
-            "#ffcccc"
-            if (float(entry["DRG倍率"]) < 0.4 or float(entry["DRG倍率"]) > 1)
-            else ""
-        )
-        pContent += f"<tr style='background-color: {bg_color}'>"
-        pContent += (
-            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['床号']}</td>"
-        )
-        pContent += (
-            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['姓名']}</td>"
-        )
-        pContent += (
-            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['诊断']}</td>"
-        )
-        pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['医疗总费用']}</td>"
-        pContent += (
-            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['DRG倍率']}</td>"
-        )
-        pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['预计结余']}</td>"
-        pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['手术费用']}</td>"
-        pContent += f"</tr>"
-
-    pContent += "</table><br>"
-
 
 # %%
 # 新增两周前后的日期变量
@@ -359,6 +61,7 @@ patient_df = patient_df[patient_df["NoticeFlag"] != "取消"]
 # %%
 
 name_mapping = {
+    "30042": "汤建国",
     "30044": "胡孙宏",
     "30046": "李文雅",
     "30047": "周明光",
@@ -388,11 +91,16 @@ name_mapping = {
     "3X118": "盖寅哲",
     "3X217": "叶高飞",
     "3X218": "金茂",
+    "3X236": "叶荆",
+    "31231": "沈斌",
 }
 
 # 转换Attending和Doctor列为姓名
 patient_df["Attending"] = patient_df["Attending"].astype(str).map(name_mapping)
-patient_df["Doctor"] = patient_df["Doctor"].astype(str).map(name_mapping)
+# 使用 map 方法转换 Doctor 列，未匹配到的用原值填充
+patient_df["Doctor"] = (
+    patient_df["Doctor"].astype(str).map(name_mapping).fillna(patient_df["Doctor"])
+)
 
 
 # 修改统计逻辑为分层统计
@@ -421,7 +129,19 @@ for attending, group in attending_stats_today:
         pContent += f"<b>{doctor} - {doctor_counts[doctor]}</b><br>"
         diag_counts = diagnosis_counts.xs(doctor, level="Doctor")
         for diag, count in diag_counts.items():
-            pContent += f"┗ {diag} - {count}<br>"
+            # 获取当前诊断下的患者姓名和病历号列表
+            patient_info = group[
+                (group["Doctor"] == doctor) & (group["Diagnose"] == diag)
+            ][["PatientName", "PatientID"]]
+            patient_list = ", ".join(
+                [
+                    f"{name}({id})"
+                    for name, id in zip(
+                        patient_info["PatientName"], patient_info["PatientID"]
+                    )
+                ]
+            )
+            pContent += f"┗ {diag} - {count}      【{patient_list}】<br>"
 
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'><br>月度预约病例</h1>\n<!-- /wp:heading -->\n"
 
