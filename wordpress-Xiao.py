@@ -105,8 +105,11 @@ pList["h2name"] = (
 # pList 根据  bedid 列逆序排列
 # pList = pList.sort_values(by="bedid", ascending=True)
 
+# 筛出保留 pList 中 tdiag 包含 dzh 的列
+pList = pList[pList["tdiag"].str.contains("dzh", case=False, na=False)]
 
-# 自定义排序规则（W后>90的按升序排在前面）
+
+# 自定义排序规则（W后>90的按升序排在前面
 def create_sort_key(bedid):
     try:
         prefix, suffix = bedid.split("W")
