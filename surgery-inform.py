@@ -146,15 +146,8 @@ admission_df["PatientID"] = admission_df["PatientID"].astype("int64")
 surgical_consents = final_df[final_df["文书名称"].str.contains("手术知情同意书")]
 
 if not surgical_consents.empty:
-    print("\n" + "=" * 60)
-    print("手术知情同意书详情请求结果：")
-
     for _, row in surgical_consents.iterrows():
-        detail_data = {
-            "modelhistory_rdn": row["序列号"],
-            "mrn": row["病历号"],
-            "name": "%E9%A9%AC%E8%8D%A3%E6%9D%A5",  # 保持原有编码格式
-        }
+        detail_data = {"modelhistory_rdn": row["序列号"], "mrn": row["病历号"]}
 
         try:
             # 发送详情请求
@@ -176,6 +169,19 @@ if not surgical_consents.empty:
             pContent += f"\n医生备注: {admission_df[admission_df['PatientID'] == row['病历号']]['drremark'].values[0] if not admission_df[admission_df['PatientID'] == row['病历号']].empty else '无备注'}\n"
 
             if detail_response.status_code == 200:
+
+                allowed_images = {
+                    "患者签字": r"患者签字：(.*?)(?=日期)",
+                }
+
+                preserved_images = []
+                for name, pattern in allowed_images.items():
+                    matches = re.findall(pattern, detail_response.text, re.DOTALL)
+                    if matches:
+                        preserved_images.append(f"{name}: {matches[0].strip()}")
+
+                images_content = "\n\n".join(preserved_images)
+
                 cleaned_content = re.sub(
                     r'<input[^>]*?value\s*=\s*"([^"]*)"[^>]*>',
                     r"\1",
@@ -220,7 +226,7 @@ if not surgical_consents.empty:
 
                 cleaned_content = "\n\n".join(preserved)
 
-                pContent += f"<div class='response-content'>{cleaned_content}</div>"
+                pContent += f"<div class='response-content'>{cleaned_content}\n{images_content}</div>"
 
             else:
                 pContent += f"\n<p style='color:red'>请求失败，状态码：{detail_response.status_code}</p>"
