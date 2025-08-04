@@ -14,11 +14,11 @@ pContent = ""
 # 新增手术安排请求
 
 # 生成明天日期字符串
-tomorrow = datetime.datetime.today() + datetime.timedelta(days=1)
+tomorrow = datetime.datetime.today() + datetime.timedelta(days=-2)
 tomorrow_str = tomorrow.strftime("%Y-%m-%d")
 
 oper_url = (
-    f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/2/A001/{tomorrow_str}"
+    f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{tomorrow_str}"
 )
 
 url = "http://192.1.3.110:8080/Zqtys/GetModelListServlet"
@@ -68,7 +68,7 @@ try:
                             {
                                 "姓名": row["pname"],
                                 "病历号": row["mrn"],
-                                "诊断": row["operp"],
+                                "手术名称": row["operp"],
                                 "文书名称": fields[0],
                                 "工号": fields[1],
                                 "签署日期": fields[2],
@@ -88,14 +88,35 @@ try:
             final_df = pd.DataFrame(combined_consents)
             # 将控制台输出转为HTML格式
             pContent += "\n<hr>\n<h2>患者知情同意书汇总表</h2>\n"
-            pContent += "<pre>"  # 使用pre标签保持文本格式
-            pContent += "\n" + "=" * 60 + "\n"
-            pContent += "患者知情同意书汇总表：\n"
-            pContent += final_df[
-                ["姓名", "病历号", "诊断", "文书名称", "签署日期"]
-            ].to_string(index=False)
-            pContent += "\n" + "=" * 60 + "\n"
-            pContent += "</pre>"
+            pContent += (
+                "<table border='1' style='border-collapse: collapse; width: 100%;'>\n"
+            )
+
+            # 按患者分组
+            current_patient = None
+            for _, row in final_df.sort_values(["病历号", "签署日期"]).iterrows():
+                # 患者信息行（淡藍色背景）
+                if current_patient != (row["姓名"], row["病历号"], row["手术名称"]):
+                    current_patient = (row["姓名"], row["病历号"], row["手术名称"])
+                    patient_info = (
+                        f"{row['姓名']}（病历号：{row['病历号']}） - {row['手术名称']}"
+                    )
+                    pContent += f"<tr style='background-color: #e6f3ff;'>"
+                    pContent += (
+                        f"<td colspan='2'><strong>{patient_info}</strong></td></tr>\n"
+                    )
+
+                # 文书信息行
+                bg_color = (
+                    "#ffe5e5"
+                    if "手术知情同意书" in row["文书名称"]
+                    else "#e5ffe5" if "患者知情选择书" in row["文书名称"] else "#ffffff"
+                )
+                pContent += f"<tr style='background-color: {bg_color}'>"
+                pContent += f"<td style='padding-left: 30px'>{row['文书名称']}</td>"
+                pContent += f"<td>{row['签署日期']}</td></tr>\n"
+
+            pContent += "</table>"
         else:
             pContent += "\n<p>未找到符合条件的知情同意书数据</p>"
 
@@ -159,7 +180,7 @@ else:
     print("\n未找到手术知情同意书记录")
 
 # %%
-
+print(pContent)
 
 # %%
 # https://robingeuens.com/blog/python-wordpress-api/
@@ -210,7 +231,7 @@ data_to_save = {
 }
 
 # Save the data to a JSON file
-with open("response_surgerinform.json", "w") as f:
+with open("response_surgeryinform.json", "w") as f:
     json.dump(data_to_save, f)
 
 # %%
