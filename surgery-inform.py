@@ -152,14 +152,13 @@ if not surgical_consents.empty:
             )
 
             # 将控制台输出转为HTML格式
-            pContent += f"\n<hr>\n<h3>患者信息</h3>\n<pre>"
             pContent += f"\n{'='*50}"
-            pContent += f"\n患者姓名: {row['姓名']}"
-            pContent += f"\n病历号: {row['病历号']}"
-            pContent += f"\n文书序列号: {row['序列号']}</pre>"
+            pContent += f"\n<h3>手术知情同意书详情：</h3>\n"
+            pContent += f"\n{'='*50}\n"
+            pContent += f"\n患者姓名: {row['姓名']}\n"
+            pContent += f"\n病历号: {row['病历号']}\n"
 
             if detail_response.status_code == 200:
-                pContent += f"\n<h4>响应内容：</h4>"
                 cleaned_content = re.sub(
                     r'<input[^>]*?value\s*=\s*"([^"]*)"[^>]*>',
                     r"\1",
@@ -171,8 +170,39 @@ if not surgical_consents.empty:
 
                 # 原有清理逻辑
                 cleaned_content = re.sub(r"&ensp;", "", cleaned_content)
-                cleaned_content = re.sub(r"(\n){3,}", "\n\n", cleaned_content)
+                cleaned_content = re.sub(r"(\n){2,}", "\n", cleaned_content)
                 cleaned_content = re.sub(r"(<br>)+", "", cleaned_content).strip("<br>")
+
+                print(cleaned_content)
+
+                # 定义带名称的正则表达式字典
+                allowed_patterns = {
+                    "主诊医生": r"您的主诊医生是:(.*?)(?=\n|您)",
+                    "经管医生": r"您的经管医生是:(.*?)(?=\n|$)",
+                    "当前诊断": r"目前诊断:(.*?)(?=\n|$)",
+                    "手术名称": r"拟施行的手术/操作名称:\n(.*?)(?=\n|$)",
+                    "手术目的": r"预期的效果：\n(.*?)(?=\n|$)",
+                    "术中风险": r"功能障碍  \n其它：(.*?)(?=\n)",
+                    "术后风险": r"再次手术  \n其它：(.*?)(?=\n)",
+                    "保守治疗": r"可供选择的其它治疗方法及您的选择：(.*?)(?=\n)",
+                    "选择治疗": r"您选择：(.*?)(?=\n)",
+                    "植入物": r"类型及厂家：\n(.*?)(?=\n|7)",
+                    "主刀医生": r"主刀医生是：(.*?)(?=\n)",
+                    "eql主诊医生": r"您的主诊医师：(.*?)(?=\n|；)",
+                    "eql主刀医生": r"主刀医师：(.*?)(?=\n|；)",
+                    "eql当前诊断": r"目前诊断：(.*?)(?=\n|$)",
+                    "eql手术名称": r"拟行手术方案：(.*?)(?=\n|$)",
+                    "eql选择治疗": r"您选择的手术方案：(.*?)(?=\n)",
+                }
+
+                preserved = []
+                for name, pattern in allowed_patterns.items():
+                    matches = re.findall(pattern, cleaned_content, re.DOTALL)
+                    if matches:
+                        preserved.append(f"{name}: {matches[0].strip()}")
+
+                cleaned_content = "\n\n".join(preserved)
+
                 pContent += f"<div class='response-content'>{cleaned_content}</div>"
             else:
                 pContent += f"\n<p style='color:red'>请求失败，状态码：{detail_response.status_code}</p>"
@@ -183,7 +213,7 @@ else:
     print("\n未找到手术知情同意书记录")
 
 # %%
-print(pContent)
+# print(pContent)
 
 # %%
 # https://robingeuens.com/blog/python-wordpress-api/
