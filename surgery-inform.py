@@ -158,11 +158,7 @@ if not surgical_consents.empty:
             )
 
             # 将控制台输出转为HTML格式
-            pContent += f"\n{'='*50}"
-            pContent += f"\n<h3>手术知情同意书详情：</h3>\n"
-            pContent += f"\n{'='*50}\n"
-            pContent += f"\n患者姓名: {row['姓名']}\n"
-            pContent += f"\n病历号: {row['病历号']}\n"
+            pContent += f"\n<h2>手术知情同意书-{row['姓名']}-{row['病历号']}</h2>\n"
 
             pContent += f"\n手术名称（通知单）: {final_df[final_df['病历号'] == row['病历号']]['手术名称'].values[0] if not final_df[final_df['病历号'] == row['病历号']].empty else '未记录'}\n"
 
@@ -256,11 +252,7 @@ if not author_content.empty:
             )
 
             # 将控制台输出转为HTML格式
-            pContent += f"\n{'='*50}"
-            pContent += f"\n<h3>患者知情选择书：</h3>\n"
-            pContent += f"\n{'='*50}\n"
-            pContent += f"\n患者姓名: {row['姓名']}\n"
-            pContent += f"\n病历号: {row['病历号']}\n"
+            pContent += f"\n<h2>患者知情选择书-{row['姓名']}-{row['病历号']}</h2>\n"
 
             # 原代码（保留其他处理逻辑）
             cleaned_content = re.sub(r"<(?!img\b)[^>]+>", "", detail_response.text)
@@ -308,16 +300,9 @@ pContent = re.sub(
 
 pContent = re.sub(
     r"右",
-    r'<span style="background-color:#00ff00;color:white;font-size:1.5em">右</span>',
+    r'<span style="background-color:#008000;color:white;font-size:1.5em">右</span>',
     pContent,
 )
-
-# 注意：
-# 1. \b 确保匹配独立字符（避免替换"左右"等组合词）
-# 2. 绿色使用#00ff00更准确
-# 3. 1.5em实现字号放大效果
-# 4. 需要确保在HTML渲染环境下生效
-
 
 # print(pContent)
 
