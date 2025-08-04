@@ -13,6 +13,10 @@ pContent = ""
 
 # 新增手术安排请求
 
+# 生成今天日期字符串
+today = datetime.datetime.today() + datetime.timedelta(days=-3)
+today_str = today.strftime("%Y-%m-%d")
+
 # 生成明天日期字符串
 tomorrow = datetime.datetime.today() + datetime.timedelta(days=-2)
 tomorrow_str = tomorrow.strftime("%Y-%m-%d")
@@ -125,6 +129,15 @@ try:
 except requests.exceptions.RequestException as e:
     print(f"手术安排请求异常：{str(e)}")
 
+# %% 新入院患者API请求
+admission_url = f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{today_str}/{tomorrow_str}/7/33/30259/"
+admission_response = requests.get(admission_url)
+admission_data = admission_response.json()
+
+# 创建入院患者DataFrame
+admission_df = pd.DataFrame(admission_data)
+admission_df["PatientID"] = admission_df["PatientID"].astype("int64")
+
 
 # %%
 # 手术知情同意书详情请求
@@ -158,6 +171,10 @@ if not surgical_consents.empty:
             pContent += f"\n患者姓名: {row['姓名']}\n"
             pContent += f"\n病历号: {row['病历号']}\n"
 
+            pContent += f"\n手术名称（通知单）: {final_df[final_df['病历号'] == row['病历号']]['手术名称'].values[0] if not final_df[final_df['病历号'] == row['病历号']].empty else '未记录'}\n"
+
+            pContent += f"\n医生备注: {admission_df[admission_df['PatientID'] == row['病历号']]['drremark'].values[0] if not admission_df[admission_df['PatientID'] == row['病历号']].empty else '无备注'}\n"
+
             if detail_response.status_code == 200:
                 cleaned_content = re.sub(
                     r'<input[^>]*?value\s*=\s*"([^"]*)"[^>]*>',
@@ -173,7 +190,7 @@ if not surgical_consents.empty:
                 cleaned_content = re.sub(r"(\n){2,}", "\n", cleaned_content)
                 cleaned_content = re.sub(r"(<br>)+", "", cleaned_content).strip("<br>")
 
-                print(cleaned_content)
+                # print(cleaned_content)
 
                 # 定义带名称的正则表达式字典
                 allowed_patterns = {
@@ -204,6 +221,7 @@ if not surgical_consents.empty:
                 cleaned_content = "\n\n".join(preserved)
 
                 pContent += f"<div class='response-content'>{cleaned_content}</div>"
+
             else:
                 pContent += f"\n<p style='color:red'>请求失败，状态码：{detail_response.status_code}</p>"
 
@@ -213,7 +231,30 @@ else:
     print("\n未找到手术知情同意书记录")
 
 # %%
+
+# 将pContent中“左”的背景颜色改为红色，“右”的背景颜色改为绿色，文字改为白色，字号改为1.5倍
+
+pContent = re.sub(
+    r"左",
+    r'<span style="background-color:red;color:white;font-size:1.5em">左</span>',
+    pContent,
+)
+
+pContent = re.sub(
+    r"右",
+    r'<span style="background-color:#00ff00;color:white;font-size:1.5em">右</span>',
+    pContent,
+)
+
+# 注意：
+# 1. \b 确保匹配独立字符（避免替换"左右"等组合词）
+# 2. 绿色使用#00ff00更准确
+# 3. 1.5em实现字号放大效果
+# 4. 需要确保在HTML渲染环境下生效
+
+
 # print(pContent)
+
 
 # %%
 # https://robingeuens.com/blog/python-wordpress-api/
