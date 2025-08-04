@@ -166,10 +166,13 @@ if not surgical_consents.empty:
                     detail_response.text,
                     flags=re.IGNORECASE,
                 )
-                cleaned_content = re.sub(r"<[^>]+>", "<br>", cleaned_content)
-                cleaned_content = re.sub(r"(<br>)+", "<br>", cleaned_content).strip(
-                    "<br>"
-                )
+                # 删除所有HTML标签（包括<br>）
+                cleaned_content = re.sub(r"<[^>]+>", "", cleaned_content)
+
+                # 原有清理逻辑
+                cleaned_content = re.sub(r"&ensp;", "", cleaned_content)
+                cleaned_content = re.sub(r"(\n){3,}", "\n\n", cleaned_content)
+                cleaned_content = re.sub(r"(<br>)+", "", cleaned_content).strip("<br>")
                 pContent += f"<div class='response-content'>{cleaned_content}</div>"
             else:
                 pContent += f"\n<p style='color:red'>请求失败，状态码：{detail_response.status_code}</p>"
