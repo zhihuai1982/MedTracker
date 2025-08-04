@@ -14,11 +14,11 @@ pContent = ""
 # 新增手术安排请求
 
 # 生成今天日期字符串
-today = datetime.datetime.today() + datetime.timedelta(days=-3)
+today = datetime.datetime.today() + datetime.timedelta(days=0)
 today_str = today.strftime("%Y-%m-%d")
 
 # 生成明天日期字符串
-tomorrow = datetime.datetime.today() + datetime.timedelta(days=-2)
+tomorrow = datetime.datetime.today() + datetime.timedelta(days=-1)
 tomorrow_str = tomorrow.strftime("%Y-%m-%d")
 
 oper_url = (
@@ -227,6 +227,66 @@ if not surgical_consents.empty:
                 cleaned_content = "\n\n".join(preserved)
 
                 pContent += f"<div class='response-content'>{cleaned_content}\n{images_content}</div>"
+
+            else:
+                pContent += f"\n<p style='color:red'>请求失败，状态码：{detail_response.status_code}</p>"
+
+        except Exception as e:
+            print(f"\n请求异常：{str(e)}")
+else:
+    print("\n未找到手术知情同意书记录")
+
+# %%
+
+# 患者知情选择书请求
+
+# 筛选包含手术知情同意书的记录
+author_content = final_df[final_df["文书名称"].str.contains("患者知情选择书")]
+
+if not author_content.empty:
+    for _, row in author_content.iterrows():
+        detail_data = {"modelhistory_rdn": row["序列号"], "mrn": row["病历号"]}
+
+        try:
+            # 发送详情请求
+            detail_response = requests.post(
+                "http://192.1.3.110:8080/Zqtys/GetHistoryModelServlet",
+                headers=headers,
+                data=detail_data,
+            )
+
+            # 将控制台输出转为HTML格式
+            pContent += f"\n{'='*50}"
+            pContent += f"\n<h3>患者知情选择书：</h3>\n"
+            pContent += f"\n{'='*50}\n"
+            pContent += f"\n患者姓名: {row['姓名']}\n"
+            pContent += f"\n病历号: {row['病历号']}\n"
+
+            # 原代码（保留其他处理逻辑）
+            cleaned_content = re.sub(r"<(?!img\b)[^>]+>", "", detail_response.text)
+            cleaned_content = re.sub(r"&ensp;", "", cleaned_content)
+
+            # print(cleaned_content)
+
+            if detail_response.status_code == 200:
+
+                # 定义带名称的正则表达式字典
+                allowed_patterns = {
+                    "患者签名": r"患者签名：(.*?)(?=签字日期：  \n  )",
+                    "患者授权签名": r"若产生不良后果将由本人承担。\n患者签名：(.*?)(?=签字日期： \n  以上内容由患者本人填写)",
+                    "被授权人签名": r"被授权人签名：(.*?)(?=签字日期：)",
+                    "关系": r"患者关系：(.*?)(?=\n)",
+                }
+
+                preserved = []
+                for name, pattern in allowed_patterns.items():
+                    matches = re.findall(pattern, cleaned_content, re.DOTALL)
+                    if matches:
+                        preserved.append(f"{name}: {matches[0].strip()}")
+
+                cleaned_content = "\n\n".join(preserved)
+
+                pContent += f"<div class='response-content'>{cleaned_content}</div>"
 
             else:
                 pContent += f"\n<p style='color:red'>请求失败，状态码：{detail_response.status_code}</p>"
