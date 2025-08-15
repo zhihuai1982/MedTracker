@@ -33,6 +33,7 @@ while current_day <= last_day:
 # === 新增数据获取部分 ===
 all_data = []
 
+# 原数据获取循环（约50-91行）
 for saturday_date in saturdays:
     url = (
         f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{saturday_date}"
@@ -41,7 +42,10 @@ for saturday_date in saturdays:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            all_data.extend(data)  # 假设返回的是列表格式数据
+            # 为每条数据添加周六日期标识
+            for item in data:
+                item["saturday_date"] = saturday_date
+            all_data.extend(data)
         else:
             print(f"请求失败：{saturday_date}，状态码：{response.status_code}")
     except Exception as e:
@@ -225,6 +229,7 @@ for index, row in dong_df.iterrows():
         "DRG倍率": 0,
         "预计结余": 0,
         "手术费用": surgery_cost,
+        "saturday_date": row["saturday_date"],  # 新增周六日期字段
     }
 
     # 遍历 forecasts 获取 DRGS 数据
@@ -244,11 +249,32 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>DRGS 
 
 # 在 DRGS 数据显示后添加表格生成（在 surgery_cost 显示之后）
 # 生成表格 HTML
-if summary_data:
-    pContent += "<br><table style='border-collapse: collapse; width: 100%;'>"
+# 原总表生成代码（约279行）
+# if summary_data:
+#     pContent += "<br><table style='border-collapse: collapse; width: 100%;'>"
+#     pContent += "<tr style='background-color: #f2f2f2;'><th>病历号</th><th>姓名</th><th>诊断</th><th>max手术名称</th><th>max手术级别</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
+
+# 修改为按周六分组生成子表
+from collections import defaultdict
+
+weekly_groups = defaultdict(list)
+for entry in summary_data:
+    weekly_groups[entry["saturday_date"]].append(entry)
+
+# 生成每周六分表
+for saturday, entries in weekly_groups.items():
+    pContent += f"<br><h2>{saturday} 周汇总表</h2>"
+    pContent += "<table style='border-collapse: collapse; width: 100%;'>"
     pContent += "<tr style='background-color: #f2f2f2;'><th>病历号</th><th>姓名</th><th>诊断</th><th>max手术名称</th><th>max手术级别</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
 
-    for entry in summary_data:  # 取最近添加的数据
+    # 周汇总统计
+    weekly_total_medical = sum(
+        float(e["医疗总费用"]) for e in entries if e["医疗总费用"]
+    )
+    weekly_total_profit = sum(e["预计结余"] for e in entries)
+    weekly_total_surgery = sum(e["手术费用"] for e in entries)
+
+    for entry in entries:
         # 根据倍率值设置行背景色
         bg_color = (
             "#ffcccc"
@@ -275,6 +301,60 @@ if summary_data:
         pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['手术费用']}</td>"
         pContent += f"</tr>"
 
+    # 添加周汇总行
+    pContent += "<tr style='background-color: #e6e6e6; font-weight: bold;'>"
+    pContent += (
+        "<td colspan='5' style='border: 1px solid #ddd; padding: 8px;'>本周汇总</td>"
+    )
+    pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{weekly_total_medical:.2f}</td>"
+    pContent += "<td style='border: 1px solid #ddd; padding: 8px;'>-</td>"
+    pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{weekly_total_profit:.2f}</td>"
+    pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{weekly_total_surgery:.2f}</td>"
+    pContent += "</tr>"
+    pContent += "</table><br>"
+
+# 生成最终总汇总表
+pContent += "<br><h2>全月总汇总表</h2>"
+pContent += "<table style='border-collapse: collapse; width: 100%;'>"
+pContent += "<tr style='background-color: #f2f2f2;'><th>病历号</th><th>姓名</th><th>诊断</th><th>max手术名称</th><th>max手术级别</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
+
+for entry in summary_data:  # 取最近添加的数据
+    # 根据倍率值设置行背景色
+    bg_color = (
+        "#ffcccc"
+        if (float(entry["DRG倍率"]) < 0.4 or float(entry["DRG倍率"]) > 1)
+        else ""
+    )
+    pContent += f"<tr style='background-color: {bg_color}'>"
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['病历号']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['姓名']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['诊断']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['max手术名称']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['max手术级别']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['医疗总费用']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['DRG倍率']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['预计结余']}</td>"
+    )
+    pContent += (
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['手术费用']}</td>"
+    )
+    pContent += f"</tr>"
+
     # 添加汇总行
     total_medical = sum(
         float(entry["医疗总费用"]) for entry in summary_data if entry["医疗总费用"]
@@ -282,23 +362,19 @@ if summary_data:
     total_profit = sum(entry["预计结余"] for entry in summary_data)
     total_surgery = sum(entry["手术费用"] for entry in summary_data)
 
-    pContent += "<tr style='background-color: #e6e6e6; font-weight: bold;'>"
-    pContent += (
-        "<td style='border: 1px solid #ddd; padding: 8px;' colspan='5'>汇总</td>"
-    )
-    pContent += (
-        f"<td style='border: 1px solid #ddd; padding: 8px;'>{total_medical:.2f}</td>"
-    )
-    pContent += "<td style='border: 1px solid #ddd; padding: 8px;'>-</td>"
-    pContent += (
-        f"<td style='border: 1px solid #ddd; padding: 8px;'>{total_profit:.2f}</td>"
-    )
-    pContent += (
-        f"<td style='border: 1px solid #ddd; padding: 8px;'>{total_surgery:.2f}</td>"
-    )
-    pContent += "</tr>"
+pContent += "<tr style='background-color: #e6e6e6; font-weight: bold;'>"
+pContent += "<td style='border: 1px solid #ddd; padding: 8px;' colspan='5'>汇总</td>"
+pContent += (
+    f"<td style='border: 1px solid #ddd; padding: 8px;'>{total_medical:.2f}</td>"
+)
+pContent += "<td style='border: 1px solid #ddd; padding: 8px;'>-</td>"
+pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{total_profit:.2f}</td>"
+pContent += (
+    f"<td style='border: 1px solid #ddd; padding: 8px;'>{total_surgery:.2f}</td>"
+)
+pContent += "</tr>"
 
-    pContent += "</table><br>"
+pContent += "</table><br>"
 
 
 # %%
