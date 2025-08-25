@@ -102,33 +102,33 @@ pList["h2name"] = (
     + pList["mrn"].astype(str)
 )
 
-# pList 根据  bedid 列逆序排列
-# pList = pList.sort_values(by="bedid", ascending=True)
 
 # 筛出保留 pList 中 tdiag 包含 dzh 的列
 pList = pList[pList["tdiag"].str.contains("dzh", case=False, na=False)]
 
+# pList 根据  bedid 列逆序排列
+pList = pList.sort_values(by="bedid", ascending=False)
 
 # 自定义排序规则（W后>90的按升序排在前面
-def create_sort_key(bedid):
-    try:
-        prefix, suffix = bedid.split("W")
-        suffix_num = int(suffix)
-        # 返回元组：前缀 | 是否>90（反向排序） | 实际数值
-        return (prefix + "W", -int(suffix_num > 90), suffix_num)
-    except:
-        return (bedid, 0, 0)
+# def create_sort_key(bedid):
+#     try:
+#         prefix, suffix = bedid.split("W")
+#         suffix_num = int(suffix)
+#         # 返回元组：前缀 | 是否>90（反向排序） | 实际数值
+#         return (prefix + "W", -int(suffix_num > 90), suffix_num)
+#     except:
+#         return (bedid, 0, 0)
 
 
-pList["sort_key"] = pList["bedid"].apply(create_sort_key)
-pList = pList.sort_values(by="sort_key").drop(columns=["sort_key"])
+# pList["sort_key"] = pList["bedid"].apply(create_sort_key)
+# pList = pList.sort_values(by="sort_key").drop(columns=["sort_key"])
 
 # print(pList)
 
 # pList 删除 mrn 为s 33565 的行
 # pList = pList[pList['mrn'] != 4009984]
 
-# pList = pList.iloc[:1]
+# pList = pList.iloc[:3]
 
 # %%
 
@@ -253,8 +253,8 @@ for index, row in pList.iterrows():
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手术安排</h1>\n<!-- /wp:heading -->\n"
 
 
-arrangeList, arrangeListHtml, upcomingSurgeryDate_str = surgical_arrange(
-    pList, 30259, "肖芒"
+arrangeList, arrangeListHtml, upcomingSurgeryDate_str = saturday_surgical_arrange(
+    pList, 30259, "董志怀"
 )
 
 pContent += "<div class='table_container'> " + arrangeListHtml + "</div>\n"
@@ -269,8 +269,17 @@ rj_df = arrangeList[arrangeList["Isroom"] == "日间"].copy()
 # rj_df 删除mrn列与pList的mrn相同的行
 rj_df = rj_df[~rj_df["mrn"].isin(pList["mrn"])]
 
-# rj_df 筛选 AppOperativeDate 列内容 与 upcomingSurgeryDate_str 相同的行
-rj_df = rj_df[rj_df["AppOperativeDate"] == upcomingSurgeryDate_str]
+# 新增代码：计算最近周六的日期
+current_date = datetime.datetime.now()
+# weekday() 返回 0-6 (0=周一, 4=周五, 5=周六, 6=周日)
+days_until_saturday = (5 - current_date.weekday()) % 7
+if days_until_saturday == 0:  # 如果今天就是周六
+    days_until_saturday = 7  # 使用下周的周六
+next_saturday = current_date + datetime.timedelta(days=days_until_saturday)
+upcomingSaturday = next_saturday.strftime("%Y-%m-%d")
+
+# ... existing code ...
+rj_df = rj_df[rj_df["AppOperativeDate"] == upcomingSaturday]
 
 # 如果rj_df不为空
 if not rj_df.empty:

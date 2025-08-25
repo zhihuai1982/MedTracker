@@ -504,7 +504,14 @@ def get_preAnesth(hDocuList):
     # 筛选df第二列中包含“Yes”的行，获取第一列和最后2列
     df = df[df[2].str.contains("Yes", na=False)].iloc[:, [0, 3, 4]]
 
-    return df.to_html(index=False, header=False)
+    # 原返回代码（约507行）
+    # return df.to_html(index=False, header=False)
+
+    # 修改后代码
+    html_table = df.to_html(index=False, header=False)
+    # 为每个<td>标签添加黄色背景样式
+    styled_html = html_table.replace("<td>", '<td style="background-color: yellow;">')
+    return styled_html
 
 
 # %%
@@ -527,7 +534,10 @@ def get_nurse_doc(mrn, series):
     else:
         content = "No match found"
 
-    return f"<!-- wp:paragraph -->\n<p class='nurse_doc'>\n{content}\n</p>\n<!-- /wp:paragraph -->"
+    # 将空格替换为<br>标签
+    content = re.sub(r"\s+", "<br>", content)
+
+    return f"<!-- wp:paragraph -->\n<p class='nurse_doc' style='background-color: yellow;'>\n{content}\n</p>\n<!-- /wp:paragraph -->"
 
 
 # %%
@@ -1524,7 +1534,6 @@ def surgical_arrange(pList, attending, aName):
     # print(upcomingSurgeryDate, upcomingSurgeryDate.weekday()+1)
     # print(nextSurgeyDate, nextSurgeyDate.weekday()+1)
 
-    # %%
     # 将日期格式化为字符串
     # today_str = today.strftime('%Y-%m-%d')
     lastSurgeryDate_str = lastSurgeryDate.strftime("%Y-%m-%d")
@@ -2241,3 +2250,519 @@ def inout(mrn, series, idList, query):
         .apply(highlight_totalinout, axis=1)
         .to_html()
     )
+
+
+# %%
+####################
+# 周六手术安排
+####################
+
+
+def saturday_surgical_arrange(pList, attending, aName):
+
+    today = datetime.date.today() + datetime.timedelta(days=0)
+
+    # 获取今天是星期几（0=星期一，6=星期日）
+    weekday = today.weekday()
+
+    # 统一使用 relativedelta 计算最近的周六
+    lastSurgeryDate = today + rd.relativedelta(weekday=rd.SA(-1))  # 上一个周六
+    prelastSurgeryDate = today + rd.relativedelta(weekday=rd.SA(-2))  # 上上一个周六
+    upcomingSurgeryDate = today + rd.relativedelta(weekday=rd.SA(+1))  # 下一个周六
+    nextSurgeyDate = today + rd.relativedelta(weekday=rd.SA(+2))  # 下下一个周六
+
+    # print(today, today.weekday() + 1)
+    # print(prelastSurgeryDate, prelastSurgeryDate.weekday() + 1)
+    # print(lastSurgeryDate, lastSurgeryDate.weekday() + 1)
+    # print(upcomingSurgeryDate, upcomingSurgeryDate.weekday() + 1)
+    # print(nextSurgeyDate, nextSurgeyDate.weekday() + 1)
+
+    # 将日期格式化为字符串
+    # today_str = today.strftime('%Y-%m-%d')
+    lastSurgeryDate_str = lastSurgeryDate.strftime("%Y-%m-%d")
+    prelastSurgeryDate_str = prelastSurgeryDate.strftime("%Y-%m-%d")
+    upcomingSurgeryDate_str = upcomingSurgeryDate.strftime("%Y-%m-%d")
+    nextSurgeyDate_str = nextSurgeyDate.strftime("%Y-%m-%d")
+
+    # arrange surgery
+    schedule_unRegister = requests.get(
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/1/33A/{attending}/"
+    ).json()
+    schedule_notYetAdmintted = requests.get(
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/5/33A/{attending}/"
+    ).json()
+    schedule_alreadyAdmintted = requests.get(
+        f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{
+            prelastSurgeryDate_str}/{nextSurgeyDate_str}/7/33A/{attending}/"
+    ).json()
+
+    # 合并前添加空DataFrame定义
+    surgeryScheduleDF = pd.DataFrame()
+
+    # 合并 unRegister, notYetAdmintted, alreadyAdmintted，并转换为dataframe
+    surgeryScheduleDF = pd.DataFrame(
+        schedule_unRegister + schedule_notYetAdmintted + schedule_alreadyAdmintted
+    )
+
+    # %%
+    surgeryScheduleDF = surgeryScheduleDF[
+        [
+            "PatientName",
+            "PatientID",
+            "Isroom",
+            "Diagnose",
+            "drremark",
+            "PatientSex",
+            "PatientAge",
+            "Doctor",
+            "NoticeFlag",
+            "noticeRecord",
+            "AppointmentIn",
+            "AppOperativeDate",
+            "arrangedate",
+            "dohoscode",
+            "PatientPhone",
+        ]
+    ]
+    # 删除bookList的 NoticeFlag为“取消”的行
+    surgeryScheduleDF = surgeryScheduleDF[surgeryScheduleDF["NoticeFlag"] != "取消"]
+
+    # 删除 drremark 列中包含 “ignore” 的行
+    surgeryScheduleDF = surgeryScheduleDF[
+        ~surgeryScheduleDF["drremark"].str.contains("ignore", na=False)
+    ]
+
+    # arrangeListdf.to_excel(
+    #     f"D:\\working-sync\\手术通知\\预约清单-{nextToDay_str}-{aName}.xlsx", index=False)
+
+    surgeryScheduleDF.rename(
+        columns={"PatientID": "mrn", "PatientName": "pname", "Diagnose": "diag"},
+        inplace=True,
+    )
+
+    surgeryScheduleDF.loc[:, "mrn"] = surgeryScheduleDF["mrn"].astype(str)
+    pList["mrn"] = pList["mrn"].astype(str)
+
+    # 将surgeryScheduleDF和pList根据mrn列合并
+    scheduleList = surgeryScheduleDF.merge(
+        pList[["mrn", "bedid"]], on=["mrn"], how="left"
+    )
+
+    # 删除 schdeuleList 里 dohoscode为 钱塘院区 的行
+    # scheduleList = scheduleList[scheduleList['dohoscode'] != '钱塘院区']
+
+    scheduleList.loc[:, "AppointmentIn"] = scheduleList["AppointmentIn"].str.replace(
+        "T00:00:00", ""
+    )
+    scheduleList.loc[:, "AppOperativeDate"] = scheduleList[
+        "AppOperativeDate"
+    ].str.replace("T00:00:00", "")
+    scheduleList.loc[:, "arrangedate"] = scheduleList["arrangedate"].str.replace(
+        "T00:00:00", ""
+    )
+
+    # %%
+
+    prelastSurgeryList = pd.DataFrame(
+        requests.get(
+            f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+            prelastSurgeryDate_str}"
+        ).json()
+    )
+
+    surgeons = ["周明光", "董志怀", "肖芒", "金茂", "叶荆"]
+
+    prelastSurgeryList = prelastSurgeryList[
+        ["mrn", "pname", "room", "cdo", "operp", "name", "plandate"]
+    ]
+    prelastSurgeryList = prelastSurgeryList[prelastSurgeryList["name"].isin(surgeons)]
+    prelastSurgeryList["mrn"] = prelastSurgeryList["mrn"].astype(str)
+
+    lastSurgeryList = pd.DataFrame(
+        requests.get(
+            f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+            lastSurgeryDate_str}"
+        ).json()
+    )
+
+    lastSurgeryList = lastSurgeryList[
+        ["mrn", "pname", "room", "cdo", "operp", "name", "plandate"]
+    ]
+    lastSurgeryList = lastSurgeryList[lastSurgeryList["name"].isin(surgeons)]
+    lastSurgeryList["mrn"] = lastSurgeryList["mrn"].astype(str)
+
+    upcomingSurgeryList = pd.DataFrame(
+        requests.get(
+            f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{
+            upcomingSurgeryDate_str}"
+        ).json()
+    )
+
+    if not upcomingSurgeryList.empty:
+        upcomingSurgeryList = upcomingSurgeryList[
+            ["mrn", "pname", "room", "cdo", "operp", "name", "plandate"]
+        ]
+        upcomingSurgeryList = upcomingSurgeryList[upcomingSurgeryList["name"] == aName]
+        upcomingSurgeryList.loc[:, "mrn"] = upcomingSurgeryList["mrn"].astype(str)
+    else:
+        upcomingSurgeryList = pd.DataFrame(
+            columns=["mrn", "pname", "room", "cdo", "operp", "name", "plandate"]
+        )
+
+    # 叠加 prelastSurgeryList， lastSurgeryList，upcomingSurgeryList
+    surgicalList = pd.concat([prelastSurgeryList, lastSurgeryList, upcomingSurgeryList])
+
+    # 删除plandate 列 包括“T"后面的所有字符
+    surgicalList.loc[:, "plandate"] = surgicalList["plandate"].str.split("T").str[0]
+
+    # %%
+    # 将 arrangeDF 和 surgicalList 根据 mrn 和pname 列合并，要求保留所有行
+    arrangeList = pd.merge(scheduleList, surgicalList, on=["mrn", "pname"], how="outer")
+
+    # arrangeList 保留 plandate为 NaN 或者 planDate 为 upcomingSurgeryDate 的行
+    arrangeList = arrangeList[
+        arrangeList["plandate"].isna()
+        | (arrangeList["plandate"] == upcomingSurgeryDate_str)
+    ]
+
+    arrangeList = arrangeList[
+        [
+            "room",
+            "cdo",
+            "pname",
+            "mrn",
+            "Isroom",
+            "diag",
+            "drremark",
+            "operp",
+            "PatientSex",
+            "PatientAge",
+            "PatientPhone",
+            "AppOperativeDate",
+            "arrangedate",
+            "NoticeFlag",
+            "noticeRecord",
+            "Doctor",
+            "bedid",
+            "plandate",
+        ]
+    ]
+
+    # 把arrangelist中的room列和cdo列改为字符串格式，并删除cdo列内容中的 .0
+    arrangeList.loc[:, "room"] = arrangeList["room"].astype(str)
+    arrangeList.loc[:, "cdo"] = arrangeList["cdo"].astype(str)
+    arrangeList.loc[:, "cdo"] = arrangeList["cdo"].str.split(".").str[0]
+
+    # %%
+    # 手术安排查询
+    url = "http://20.21.1.224:5537/hospital/MEDICALADVICEService/getOperList"
+
+    payload = {
+        "serviceFunCode": "00000585",
+        "serviceParam": {
+            "DOFLAG": "0",
+            "STARTDATE": f"{datetime.date.today()} 00:00:00",
+            "ENDDATE": f"{datetime.date.today() + datetime.timedelta(days=7)} 23:59:59",
+            "opdept": "",
+            "dohoscode": "",
+            "DEPTID": "33",
+        },
+        "logInfo": {
+            "stay": None,
+            "loginHosCodeNm": "庆春院区",
+            "loginHospitalNm": "浙江大学医学院附属邵逸夫医院",
+            "loginUserId": "73298",
+            "loginUserNm": "董志怀",
+            "loginHosCode": "A001",
+            "loginDeptId": "33",
+            "loginDeptNm": "耳鼻咽喉头颈外科",
+            "loginPassword": "0",
+            "loginDpower": None,
+            "loginNpower": None,
+            "loginStay": "I",
+            "loginSysId": "14",
+            "loginSysNm": "住院医生系统",
+            "title": "3",
+            "zc": None,
+            "loginBaseFlag": None,
+            "loginBaseZyFlag": None,
+            "loginSpecial": None,
+            "loginDoMain": "F",
+            "loginIp": None,
+            "loginCa": "330623198212060014",
+            "ysqx": False,
+            "attending": None,
+            "ssoToken": "QUFRVTBmVlUrWXZPWklyQ3NKbHRHb3ZyKy95cGFDMHhXQjZQUGozRmRoMFpUbEk5QW1XQ1BNRDVoY1JDcG04MzB3R1o3QjBqZkVWY0NtK0tPWVNqcEJjRHhkTGgvU1NKcXJUdFVpUnQ2MTRvV0ZNUjFITzhLZTVycVpKQWNzcFREZXgxMWJXalNPbVZNR1F5NFcrdU1DVytpRVRmOURIcStzUTNVSDRJWGxZPQ==",
+            "caflag": False,
+            "castatus": "-1",
+            "caAuthTime": 1,
+            "caAuthKEY": "ae74c096a0c0498fbde258b377e8ac2f",
+            "caGetAccessToken": "87e4e926ec644f33976fbe89ecd96730_13",
+            "domain": "F",
+            "drId": None,
+            "loginClincRoom": None,
+            "loginClassId": None,
+            "loginCallQid": None,
+            "loginCallDate": None,
+            "cardId": "330623198212060014",
+            "loginempnetphone": "664628",
+            "loginempnetphonE2": "13515818082",
+            "ip": None,
+            "computerName": None,
+            "doctorDept": None,
+            "loginBrlx": "",
+            "loginMedGroup": "30047",
+            "isHemodialysis": False,
+            "deptHemodialysis": "30",
+            "isAttending": False,
+            "isDirector": False,
+            "flagantiEmp": "2",
+            "gjbm": "D330104050866",
+            "DrId": "",
+            "cellPhone": "664628",
+        },
+    }
+
+    headers = {
+        "Connection": "keep-alive",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,ru;q=0.7,zh-TW;q=0.6",
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiNzMyOTgiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9naXZlbm5hbWUiOiLokaPlv5fmgIAiLCJubiI6IkEwMDEiLCJpZCI6IjczMjk4IiwianRpIjoiRiAgIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9leHBpcmF0aW9uIjoiMTIvMjkvMjAyMyAwMToxOToyNyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkYgICIsIm5iZiI6MTcwMzc3MzE2NywiZXhwIjoxNzAzNzgzOTY3LCJpc3MiOiJFbXJzV2ViLkFwaSIsImF1ZCI6IndyIn0.EEPOpH_gh0cJFkSPjNKKKATMXVG8Hw6R48fSevgkX64",
+        "Host": "20.21.1.224:5537",
+        "Origin": "http://20.21.1.224:5537",
+        "Referer": "http://20.21.1.224:5537/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.request(
+        "POST", url, headers=headers, data=json.dumps(payload)
+    ).json()["resultJson"]
+
+    # 如果response为空列表的话，新建空的preArrangedf，包含mrn，pname，operp，remark，cdonm，aneask，agentnm，askdate列
+    if response == []:
+        preArrangedf = pd.DataFrame(
+            columns=[
+                "mrn",
+                "pname",
+                "operp",
+                "remark",
+                "cdonm",
+                "aneask",
+                "agentnm",
+                "askdate",
+            ]
+        )
+    else:
+        preArrangedf = pd.DataFrame(response)
+
+        preArrangedf = preArrangedf[
+            [
+                "mrn",
+                "pname",
+                "operp",
+                "remark",
+                "cdonm",
+                "aneask",
+                "agentnm",
+                "askdate",
+                "drpname",
+            ]
+        ]
+
+        # 筛选出 drpname 列包含drpname的行
+        preArrangedf = preArrangedf[preArrangedf["drpname"] == aName]
+        # 删除 drpname 列
+
+        preArrangedf.drop(columns="drpname", inplace=True)
+
+        # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
+        preArrangedf.loc[:, "askdate"] = (
+            preArrangedf["askdate"].str.replace("/", "-").str.split(" ").str[0]
+        )
+
+    # 重命名operp为arroperp
+    preArrangedf.rename(columns={"operp": "arroperp"}, inplace=True)
+
+    # 将askdate的类型是str，格式是2024/1/2 0:00:00，我想改成2024-01-02
+    preArrangedf.loc[:, "askdate"] = (
+        preArrangedf["askdate"].str.replace("/", "-").str.split(" ").str[0]
+    )
+
+    # 合并 arrangeList 和 preArrangedf，保存到 arrangeList
+    arrangeList = arrangeList.merge(preArrangedf, on=["mrn", "pname"], how="outer")
+
+    # %%
+    # arrangeList 根据 room，cdo，AppOperateiveDate 升序排列
+    arrangeList = arrangeList.sort_values(
+        by=["room", "cdo", "AppOperativeDate", "remark", "cdonm"],
+        ascending=[True, True, True, True, True],
+    )
+
+    # arrangeList 的 room 和 cdo 列的类型是str，把它们的“nan”替换为空格
+    arrangeList.loc[:, "room"] = arrangeList["room"].str.replace("nan", "")
+    arrangeList.loc[:, "cdo"] = arrangeList["cdo"].str.replace("nan", "")
+
+    # 新增有效日期列表
+    valid_dates = [
+        lastSurgeryDate_str,
+        prelastSurgeryDate_str,
+        upcomingSurgeryDate_str,
+        nextSurgeyDate_str,
+    ]
+
+    # 保留 AppOperativeDate 在有效日期范围内的行
+    arrangeList = arrangeList[arrangeList["AppOperativeDate"].isin(valid_dates)]
+
+    def highlight_upcomingSurgeryDate(row):
+        if (
+            pd.notnull(row["AppOperativeDate"])
+            and pd.to_datetime(row["AppOperativeDate"]).date() == upcomingSurgeryDate
+        ):
+            return ["background-color: yellow"] * len(row)
+        else:
+            return [""] * len(row)
+
+    def highlight_nextSurgeryDate(row):
+        if (
+            pd.notnull(row["AppOperativeDate"])
+            and pd.to_datetime(row["AppOperativeDate"]).date() == nextSurgeyDate
+        ):
+            return ["background-color: lightgreen"] * len(row)
+        else:
+            return [""] * len(row)
+
+    # 将列宽设置为table styles
+    widthStyle = [
+        {
+            "selector": "th.col_heading.level0.col0",
+            "props": [("width", "40px")],
+        },  # room
+        {"selector": "th.col_heading.level0.col1", "props": [("width", "40px")]},  # cdo
+        {
+            "selector": "th.col_heading.level0.col2",
+            "props": [("width", "70px")],
+        },  # pname
+        {"selector": "th.col_heading.level0.col3", "props": [("width", "80px")]},  # mrn
+        {
+            "selector": "th.col_heading.level0.col4",
+            "props": [("width", "60px")],
+        },  # Isroom
+        {
+            "selector": "th.col_heading.level0.col5",
+            "props": [("width", "150px")],
+        },  # diag
+        {
+            "selector": "th.col_heading.level0.col6",
+            "props": [("width", "200px")],
+        },  # drremark
+        {
+            "selector": "th.col_heading.level0.col7",
+            "props": [("width", "200px")],
+        },  # operp
+        {
+            "selector": "th.col_heading.level0.col8",
+            "props": [("width", "30px")],
+        },  # PatientSex
+        {
+            "selector": "th.col_heading.level0.col9",
+            "props": [("width", "50px")],
+        },  # PatientAge
+        {
+            "selector": "th.col_heading.level0.col10",
+            "props": [("width", "110px")],
+        },  # PatientPhone
+        {
+            "selector": "th.col_heading.level0.col10",
+            "props": [("width", "100px")],
+        },  # AppOperativeDate
+        {
+            "selector": "th.col_heading.level0.col12",
+            "props": [("width", "100px")],
+        },  # arrangedate
+        {
+            "selector": "th.col_heading.level0.col13",
+            "props": [("width", "100px")],
+        },  # NoticeFlag
+        {
+            "selector": "th.col_heading.level0.col14",
+            "props": [("width", "100px")],
+        },  # noticeRecord
+        {
+            "selector": "th.col_heading.level0.col15",
+            "props": [("width", "100px")],
+        },  # Doctor
+        {
+            "selector": "th.col_heading.level0.col16",
+            "props": [("width", "100px")],
+        },  # bedid
+        {
+            "selector": "th.col_heading.level0.col17",
+            "props": [("width", "100px")],
+        },  # plandate
+        {
+            "selector": "th.col_heading.level0.col18",
+            "props": [("width", "200px")],
+        },  # preprop
+        {
+            "selector": "th.col_heading.level0.col19",
+            "props": [("width", "200px")],
+        },  # remark
+        {
+            "selector": "th.col_heading.level0.col20",
+            "props": [("width", "40px")],
+        },  # cdonm
+        {
+            "selector": "th.col_heading.level0.col21",
+            "props": [("width", "60px")],
+        },  # aneask
+        {
+            "selector": "th.col_heading.level0.col22",
+            "props": [("width", "60px")],
+        },  # agentnm
+        {
+            "selector": "th.col_heading.level0.col23",
+            "props": [("width", "100px")],
+        },  # askdate
+    ]
+
+    # 定义固定列的样式
+    columnFixStyle = [
+        {
+            "selector": "tr:nth-child(odd) th:nth-child(1), tr:nth-child(odd) td:nth-child(1)",
+            "props": "position: -webkit-sticky; position: sticky; left:0px; background-color: #f6f6f6;",
+        },
+        {
+            "selector": "tr:nth-child(even) th:nth-child(1), tr:nth-child(even) td:nth-child(1)",
+            "props": "position: -webkit-sticky; position: sticky; left:0px; background-color: #ffffff;",
+        },
+        {
+            "selector": "tr:nth-child(odd) th:nth-child(2), tr:nth-child(odd) td:nth-child(2)",
+            "props": "position: -webkit-sticky; position: sticky; left:40px; background-color: #f6f6f6;",
+        },
+        {
+            "selector": "tr:nth-child(even) th:nth-child(2), tr:nth-child(even) td:nth-child(2)",
+            "props": "position: -webkit-sticky; position: sticky; left:40px; background-color: #ffffff;",
+        },
+        {
+            "selector": "tr:nth-child(odd) th:nth-child(3), tr:nth-child(odd) td:nth-child(3)",
+            "props": "position: -webkit-sticky; position: sticky; left:80px; background-color: #f6f6f6;",
+        },
+        {
+            "selector": "tr:nth-child(even) th:nth-child(3), tr:nth-child(even) td:nth-child(3)",
+            "props": "position: -webkit-sticky; position: sticky; left:80px; background-color: #ffffff;",
+        },
+    ]
+
+    arrangeListHtml = (
+        arrangeList.style.hide()
+        .set_table_attributes('style="width:2600px;"')
+        .set_table_styles(widthStyle + columnFixStyle)
+        .apply(highlight_upcomingSurgeryDate, axis=1)
+        .apply(highlight_nextSurgeryDate, axis=1)
+        .to_html()
+    )
+
+    return arrangeList, arrangeListHtml, upcomingSurgeryDate_str
