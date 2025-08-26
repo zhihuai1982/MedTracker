@@ -30,6 +30,23 @@ while current_day <= last_day:
         saturdays.append(current_day.strftime("%Y-%m-%d"))
     current_day += datetime.timedelta(days=1)
 
+# 计算上个月的周六日期
+# today = datetime.date.today()
+# # 获取上个月的第一天（当前月第一天减去1个月）
+# first_day_of_last_month = today.replace(day=1) - relativedelta(months=1)
+# # 获取上个月的最后一天（上个月第一天加1个月后减1天）
+# last_day_of_last_month = (
+#     first_day_of_last_month + relativedelta(months=1) - datetime.timedelta(days=1)
+# )
+
+# saturdays = []
+# current_day = first_day_of_last_month
+# while current_day <= last_day_of_last_month:
+#     if current_day.weekday() == 5:  # 5代表周六（周一=0）
+#         saturdays.append(current_day.strftime("%Y-%m-%d"))
+#     current_day += datetime.timedelta(days=1)
+
+
 # === 新增数据获取部分 ===
 all_data = []
 
@@ -57,6 +74,7 @@ df = pd.DataFrame(all_data)
 # === 新增筛选代码 ===
 # 筛选姓名为董志怀的记录
 dong_df = df[df["name"] == "董志怀"]
+# dong_df = df[df["name"] == "沈斌"]
 
 pContent = ""  # 选择要发布的内容，drgs或appointment
 
@@ -265,7 +283,7 @@ for entry in summary_data:
 for saturday, entries in weekly_groups.items():
     pContent += f"<br><h2>{saturday} 周汇总表</h2>"
     pContent += "<table style='border-collapse: collapse; width: 100%;'>"
-    pContent += "<tr style='background-color: #f2f2f2;'><th>病历号</th><th>姓名</th><th>诊断</th><th>max手术名称</th><th>max手术级别</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
+    pContent += "<tr style='background-color: #f2f2f2;'><th>姓名-病历号</th><th>诊断</th><th>max手术名称</th><th>max手术级别</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
 
     # 周汇总统计
     weekly_total_medical = sum(
@@ -282,12 +300,7 @@ for saturday, entries in weekly_groups.items():
             else ""
         )
         pContent += f"<tr style='background-color: {bg_color}'>"
-        pContent += (
-            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['病历号']}</td>"
-        )
-        pContent += (
-            f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['姓名']}</td>"
-        )
+        pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>-{entry['姓名']}-{entry['病历号']}-</td>"
         pContent += (
             f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['诊断']}</td>"
         )
@@ -304,7 +317,7 @@ for saturday, entries in weekly_groups.items():
     # 添加周汇总行
     pContent += "<tr style='background-color: #e6e6e6; font-weight: bold;'>"
     pContent += (
-        "<td colspan='5' style='border: 1px solid #ddd; padding: 8px;'>本周汇总</td>"
+        "<td colspan='4' style='border: 1px solid #ddd; padding: 8px;'>本周汇总</td>"
     )
     pContent += f"<td style='border: 1px solid #ddd; padding: 8px;'>{weekly_total_medical:.2f}</td>"
     pContent += "<td style='border: 1px solid #ddd; padding: 8px;'>-</td>"
@@ -327,10 +340,10 @@ for entry in summary_data:  # 取最近添加的数据
     )
     pContent += f"<tr style='background-color: {bg_color}'>"
     pContent += (
-        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['病历号']}</td>"
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['姓名']}</td>"
     )
     pContent += (
-        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['姓名']}</td>"
+        f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['病历号']}</td>"
     )
     pContent += (
         f"<td style='border: 1px solid #ddd; padding: 8px;'>{entry['诊断']}</td>"
