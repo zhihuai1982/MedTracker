@@ -74,7 +74,7 @@ df = pd.DataFrame(all_data)
 
 # === 新增筛选代码 ===
 # 筛选姓名为董志怀的记录
-dong_df = df[df["name"] == "董志怀"][:3]
+dong_df = df[df["name"] == "董志怀"]
 # dong_df = df[df["name"] == "沈斌"]
 
 # %%
@@ -125,20 +125,45 @@ for index, row in dong_df.iterrows():
             surgery_charges.extend(surgery_charge.split("+"))
 
         # 打印提取的结果（可选）
-        print("手术名称列表:", surgery_names)
-        print("手术收费列表:", surgery_charges)
+        # print("手术名称列表:", surgery_names)
+        # print("手术收费列表:", surgery_charges)
+
+        # 在提取手术名称和手术收费之后添加以下代码
+
+        # 创建包含手术名称的DataFrame
+        surgery_levels_df = pd.DataFrame({"手术名称": surgery_names, "等级": ""})
+
+        # 新增手术名称清洗列，移除前缀和尖括号内容
+        surgery_levels_df["手术名称strip"] = surgery_levels_df["手术名称"].apply(
+            lambda x: re.sub(
+                r"<.*?>",
+                "",  # 移除尖括号及内容
+                x.replace("主手术:", "").replace("次手术:", ""),  # 移除前缀
+            ).strip()  # 去除首尾空白
+        )
+
+        # 遍历surgery_levels_df中的每个手术名称
+        for idx, surgery in surgery_levels_df.iterrows():
+            surgery_name = surgery["手术名称strip"]
+            # 在level_df中查找被包含的手术名称（反向匹配）
+            matches = level_df[
+                level_df["手术名称"].str.contains(surgery_name, na=False, regex=False)
+            ]
+            # 打印匹配结果
+            # print("$$$", matches)
+            if not matches.empty:
+                # 直接更新当前行的等级，取第一个匹配结果
+                surgery_levels_df.at[idx, "等级"] = matches.iloc[0]["手术等级"]
+
+        print(surgery_levels_df)
 
     # 在后续代码中可以使用 surgery_names 和 surgery_charges 列表
 
-    # 通过 http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid=row["mrn"]-row["series"]-&pageSourceType=THD&hosCode=A002 接口获取患者信息
+    # # 通过 http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid=row["mrn"]-row["series"]-&pageSourceType=THD&hosCode=A002 接口获取患者信息
     patientInfo = requests.get(
         f"http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid={row['mrn']}-{row['series']}-&pageSourceType=THD&hosCode=A001",
         headers=headers,
     ).json()  # 添加.json()将响应转换为字典
-
-    # 获取 patientInfo 中
-    pContent += f"<!-- wp:heading --><br><h2 class='wp-block-heading' id = '{row['pname']}'>{
-        row['pname']}</h2><br><!-- /wp:heading --><br>"
 
     # 诊断
     diagnosis_name = (
@@ -147,6 +172,11 @@ for index, row in dong_df.iterrows():
         .get("mainDiagnosis", {})
         .get("diagnosisName", "")
     )
+
+    # 获取 patientInfo 中
+    pContent += f"<!-- wp:heading --><br><h2 class='wp-block-heading' id = '{row['pname']}'>{
+        row['pname']}-{row['mrn']}- {diagnosis_name}</h2><!-- /wp:heading -->"
+
     if diagnosis_name:
         pContent += f"<b>诊断：</b><br>{diagnosis_name}<br>"
 
@@ -154,79 +184,37 @@ for index, row in dong_df.iterrows():
     second_surgeries = (
         patientInfo.get("data", {})
         .get("diagnosisDetail", {})
-        .get("secondDiagnosis", [])
-    )
+        .get("secondDiagnosisList", [])
+    ) or []
+
     for diagnosis in second_surgeries:  # 即使列表不存在/为空也能安全遍历
-        diagnosis_name = diagnosis.get("diagnosisName")
-        if diagnosis_name:  # 过滤空值
-            pContent += f"┗{diagnosis_name}<br>"  # 添加标识前缀
+        sec_diagnosis_name = diagnosis.get("diagnosisName")
+        if sec_diagnosis_name:  # 过滤空值
+            pContent += f"┗{sec_diagnosis_name}<br>"  # 添加标识前缀
 
-    # 手术名称
-
-    # 添加类型检查确保对象是字典
-    surgery_detail = patientInfo.get("data", {}) or {}
-    surgery_detail = (
-        surgery_detail.get("surgeryDetail", {})
-        if isinstance(surgery_detail, dict)
-        else {}
-    )
-
-    # 替换 surgery_levels 列表为 DataFrame
-    surgery_levels_df = pd.DataFrame(columns=["手术名称", "等级"])
-
-    main_surgery = (
-        surgery_detail.get("mainSurgery", {})
-        if isinstance(surgery_detail, dict)
-        else {}
-    )
-    surgery_name = (
-        main_surgery.get("surgeryName", "") if isinstance(main_surgery, dict) else ""
-    )
-
-    if surgery_name:
-        main_matches = level_df[
-            level_df["手术名称"].str.contains(surgery_name, na=False, regex=False)
-        ]
-        if not main_matches.empty:
-            surgery_levels_df = pd.concat(
-                [
-                    surgery_levels_df,
-                    main_matches[["手术名称", "手术等级"]].rename(
-                        columns={"手术等级": "等级"}
-                    ),
-                ]
+    # # 手术名称
+    for idx, row_surgery in surgery_levels_df.iterrows():
+        if idx == 0:
+            pContent += f"<b>手术：</b><br>{row_surgery['手术名称']} ----- {row_surgery['等级']}<br>"
+        else:
+            pContent += (
+                f"    ┗{row_surgery['手术名称']} ----- {row_surgery['等级']}<br>"
             )
-            pContent += f"<b>手术：</b>{surgery_name}————{main_matches[['手术等级']].values[0]}<br>"
 
-    # 遍历次要手术列表（修复None类型不可迭代问题）
-    second_surgeries = (
-        surgery_detail.get("secondSurgeryList") or []  # 添加or []处理None情况
-        if isinstance(surgery_detail, dict)
-        else []
-    )
-    for surgery in second_surgeries:
-        surgery_name = (
-            surgery.get("surgeryName", "") if isinstance(surgery, dict) else ""
-        )
-        if surgery_name:
-            sec_matches = level_df[
-                level_df["手术名称"].str.contains(surgery_name, na=False, regex=False)
-            ]
-            if not sec_matches.empty:
-                surgery_levels_df = pd.concat(
-                    [
-                        surgery_levels_df,
-                        sec_matches[["手术名称", "手术等级"]].rename(
-                            columns={"手术等级": "等级"}
-                        ),
-                    ]
-                )
-                pContent += (
-                    f"┗{surgery_name}————{sec_matches[['手术等级']].values[0]}<br>"
-                )
+    # # 手术费用
+    for idx, charge in enumerate(surgery_charges):
+        if idx == 0:
+            pContent += f"<b>手术费用：</b><br>{charge}<br>"
+        else:
+            pContent += f"    ┗{charge}<br>"
 
     # 获取最高等级手术信息
     if not surgery_levels_df.empty:
+        surgery_levels_df["等级"] = (
+            pd.to_numeric(surgery_levels_df["等级"], errors="coerce")
+            .fillna(0)
+            .astype(int)
+        )
         max_row = surgery_levels_df.sort_values("等级", ascending=False).iloc[0]
         max_surgery_level = max_row["等级"]
         max_surgery_name = max_row["手术名称"]
@@ -303,6 +291,8 @@ for index, row in dong_df.iterrows():
         )
         summary_data.append(summary_entry.copy())  # 使用副本避免数据覆盖
 
+
+pContent += "===============================================<br>"
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>DRGS 汇总表</h1>\n<!-- /wp:heading -->\n"
 
 # 在 DRGS 数据显示后添加表格生成（在 surgery_cost 显示之后）
@@ -408,6 +398,18 @@ for entry in summary_data:  # 取最近添加的数据
     )
     pContent += f"</tr>"
 
+    summary_df = pd.DataFrame(summary_data)
+    surgery_level_counts = summary_df["max手术级别"].value_counts().sort_index()
+    level_strings = []
+    for level, count in surgery_level_counts.items():
+        if isinstance(level, int) and count > 0:
+            level_strings.append(f"{level}级{count}个")
+
+    # 合并为单个字符串
+    surgery_level_summary = (
+        "，".join(level_strings) if level_strings else "无手术级别数据"
+    )
+
     # 添加汇总行
     total_medical = sum(
         float(entry["医疗总费用"]) for entry in summary_data if entry["医疗总费用"]
@@ -416,7 +418,10 @@ for entry in summary_data:  # 取最近添加的数据
     total_surgery = sum(entry["手术费用"] for entry in summary_data)
 
 pContent += "<tr style='background-color: #e6e6e6; font-weight: bold;'>"
-pContent += "<td style='border: 1px solid #ddd; padding: 8px;' colspan='5'>汇总</td>"
+pContent += "<td style='border: 1px solid #ddd; padding: 8px;' colspan='4'>汇总</td>"
+pContent += (
+    f"<td style='border: 1px solid #ddd; padding: 8px;'>{surgery_level_summary}</td>"
+)
 pContent += (
     f"<td style='border: 1px solid #ddd; padding: 8px;'>{total_medical:.2f}</td>"
 )
