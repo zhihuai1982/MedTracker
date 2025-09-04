@@ -4,6 +4,7 @@ import datetime
 import requests  # 新增请求库
 import pandas as pd  # 新增pandas库
 from dateutil.relativedelta import relativedelta
+import re
 
 
 headers = {
@@ -31,20 +32,20 @@ while current_day <= last_day:
     current_day += datetime.timedelta(days=1)
 
 # 计算上个月的周六日期
-# today = datetime.date.today()
-# # 获取上个月的第一天（当前月第一天减去1个月）
-# first_day_of_last_month = today.replace(day=1) - relativedelta(months=1)
-# # 获取上个月的最后一天（上个月第一天加1个月后减1天）
-# last_day_of_last_month = (
-#     first_day_of_last_month + relativedelta(months=1) - datetime.timedelta(days=1)
-# )
 
-# saturdays = []
-# current_day = first_day_of_last_month
-# while current_day <= last_day_of_last_month:
-#     if current_day.weekday() == 5:  # 5代表周六（周一=0）
-#         saturdays.append(current_day.strftime("%Y-%m-%d"))
-#     current_day += datetime.timedelta(days=1)
+today = datetime.date.today()
+# 获取上个月的第一天（当前月第一天减去1个月）
+first_day_of_last_month = today.replace(day=1) - relativedelta(months=1)
+# 获取上个月的最后一天（上个月第一天加1个月后减1天）
+last_day_of_last_month = (
+    first_day_of_last_month + relativedelta(months=1) - datetime.timedelta(days=1)
+)
+saturdays = []
+current_day = first_day_of_last_month
+while current_day <= last_day_of_last_month:
+    if current_day.weekday() == 5:  # 5代表周六（周一=0）
+        saturdays.append(current_day.strftime("%Y-%m-%d"))
+    current_day += datetime.timedelta(days=1)
 
 
 # === 新增数据获取部分 ===
@@ -73,8 +74,10 @@ df = pd.DataFrame(all_data)
 
 # === 新增筛选代码 ===
 # 筛选姓名为董志怀的记录
-dong_df = df[df["name"] == "董志怀"]
+dong_df = df[df["name"] == "董志怀"][:3]
 # dong_df = df[df["name"] == "沈斌"]
+
+# %%
 
 pContent = ""  # 选择要发布的内容，drgs或appointment
 
@@ -90,9 +93,46 @@ for index, row in dong_df.iterrows():
 
     print(row["mrn"])
 
+    # 在获取 patientInfo 后添加以下代码
+    # 通过 http://20.21.1.224:5537/api/api/Physiorcd/GetNurDoc/{row['mrn']}/{row['series']} 获取结果
+    nur_doc_url = f"http://20.21.1.224:5537/api/api/Physiorcd/GetNurDoc/{row['mrn']}/{row['series']}"
+    nur_doc_response = requests.get(nur_doc_url)
+
+    if nur_doc_response.status_code == 200:
+        nur_doc_data = nur_doc_response.text
+
+        # 提取手术名称和手术收费
+        surgery_names = []
+        surgery_charges = []
+
+        # 使用正则表达式提取手术名称
+        surgery_name_match = re.search(
+            r"手术代码:.+?手术名称:(.+?)收费代码:", nur_doc_data, re.DOTALL
+        )
+
+        if surgery_name_match:
+            surgery_name = surgery_name_match.group(1).strip()
+            # 按'+'分隔手术名称
+            surgery_names.extend(surgery_name.split("+"))
+
+        # 使用正则表达式提取手术收费
+        surgery_charge_match = re.search(
+            r"手术收费名:(.+?)手术/收费名称确认:", nur_doc_data, re.DOTALL
+        )
+        if surgery_charge_match:
+            surgery_charge = surgery_charge_match.group(1).strip()
+            # 按'+'分隔手术收费
+            surgery_charges.extend(surgery_charge.split("+"))
+
+        # 打印提取的结果（可选）
+        print("手术名称列表:", surgery_names)
+        print("手术收费列表:", surgery_charges)
+
+    # 在后续代码中可以使用 surgery_names 和 surgery_charges 列表
+
     # 通过 http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid=row["mrn"]-row["series"]-&pageSourceType=THD&hosCode=A002 接口获取患者信息
     patientInfo = requests.get(
-        f"http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid={row['mrn']}-{row['series']}-&pageSourceType=THD&hosCode=A002",
+        f"http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid={row['mrn']}-{row['series']}-&pageSourceType=THD&hosCode=A001",
         headers=headers,
     ).json()  # 添加.json()将响应转换为字典
 
@@ -398,7 +438,7 @@ from datetime import datetime
 
 # WordPress认证信息
 user = "zhihuai1982"
-password = "dtPD 9emY eyH8 Vcbn nl31 WKMr"
+password = "NOqs cD6c 4Syt uCOf kLoU hjlm"
 credentials = user + ":" + password
 token = base64.b64encode(credentials.encode())
 header = {"Authorization": "Basic " + token.decode("utf-8")}
