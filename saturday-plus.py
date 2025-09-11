@@ -33,19 +33,19 @@ while current_day <= last_day:
 
 # 计算上个月的周六日期
 
-today = datetime.date.today()
-# 获取上个月的第一天（当前月第一天减去1个月）
-first_day_of_last_month = today.replace(day=1) - relativedelta(months=1)
-# 获取上个月的最后一天（上个月第一天加1个月后减1天）
-last_day_of_last_month = (
-    first_day_of_last_month + relativedelta(months=1) - datetime.timedelta(days=1)
-)
-saturdays = []
-current_day = first_day_of_last_month
-while current_day <= last_day_of_last_month:
-    if current_day.weekday() == 5:  # 5代表周六（周一=0）
-        saturdays.append(current_day.strftime("%Y-%m-%d"))
-    current_day += datetime.timedelta(days=1)
+# today = datetime.date.today()
+# # 获取上个月的第一天（当前月第一天减去1个月）
+# first_day_of_last_month = today.replace(day=1) - relativedelta(months=1)
+# # 获取上个月的最后一天（上个月第一天加1个月后减1天）
+# last_day_of_last_month = (
+#     first_day_of_last_month + relativedelta(months=1) - datetime.timedelta(days=1)
+# )
+# saturdays = []
+# current_day = first_day_of_last_month
+# while current_day <= last_day_of_last_month:
+#     if current_day.weekday() == 5:  # 5代表周六（周一=0）
+#         saturdays.append(current_day.strftime("%Y-%m-%d"))
+#     current_day += datetime.timedelta(days=1)
 
 
 # === 新增数据获取部分 ===

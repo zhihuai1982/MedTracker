@@ -172,7 +172,7 @@ from datetime import datetime
 
 # WordPress认证信息
 user = "zhihuai1982"
-password = "dtPD 9emY eyH8 Vcbn nl31 WKMr"
+password = "NOqs cD6c 4Syt uCOf kLoU hjlm"
 credentials = user + ":" + password
 token = base64.b64encode(credentials.encode())
 header = {"Authorization": "Basic " + token.decode("utf-8")}
