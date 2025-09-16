@@ -5,6 +5,7 @@ import requests
 from io import StringIO
 from datetime import datetime
 import re
+import os
 
 # 读取Excel文件并处理数据
 excel_file = "2025-07月至2025-09月病例数据统计表.xlsx"
@@ -165,9 +166,6 @@ screened_patient_df["surgeryDuration"] = (
     screened_patient_df["surgeryDuration"].str.replace("分", "").astype(int)
 )
 screened_patient_df["surgeryDate"] = pd.to_datetime(screened_patient_df["surgeryDate"])
-screened_patient_df["surgeryDate"] = screened_patient_df["surgeryDate"].dt.strftime(
-    "%Y-%m-%d"
-)
 
 # 数据预览（包含手术信息）
 print("\n添加手术信息后的数据预览：")
@@ -177,12 +175,17 @@ print(
     ].head()
 )
 
-
 # %%
-# 创建picDir列，格式为：surgeryDate-name-mrn-surgon-primarySurgery
+# 创建picDir列，格式为：surgeryDate列（YYYY-MM）\surgeryDate-name-mrn-surgon-primarySurgery
 
+# 创建YYYY-MM格式的日期字符串
+yyyy_mm = screened_patient_df["surgeryDate"].dt.strftime("%Y-%m")
+
+# 创建picDir列
 screened_patient_df["picDir"] = (
-    screened_patient_df["surgeryDate"].astype(str)
+    yyyy_mm
+    + "\\"
+    + screened_patient_df["surgeryDate"].dt.strftime("%Y-%m-%d")
     + "-"
     + screened_patient_df["name"].fillna("unknown")
     + "-"
@@ -197,6 +200,33 @@ screened_patient_df["picDir"] = (
     .str.strip()
 )
 
+
+# %%
+# 创建检查照片保存目录
+
+# 基础目录
+base_dir = "D:\\otology-pic"
+
+# 确保基础目录存在
+os.makedirs(base_dir, exist_ok=True)
+
+# 遍历DataFrame创建文件夹
+for _, row in screened_patient_df.iterrows():
+    try:
+        # 获取picDir值
+        pic_dir = row["picDir"]
+
+        # 构建完整的文件夹路径
+        full_path = os.path.join(base_dir, pic_dir)
+
+        # 创建文件夹，如果已存在则跳过
+        os.makedirs(full_path, exist_ok=True)
+
+    except Exception as e:
+        print(f"创建文件夹时出错 (mrn={row.get('mrn', 'unknown')}): {e}")
+        continue
+
+print(f"已为所有患者创建文件夹结构")
 
 # %%
 
@@ -235,6 +265,7 @@ db_config = {
 engine = create_engine(
     f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
 )
+
 
 # 获取现有记录并处理重复数据
 existing_adn = []
