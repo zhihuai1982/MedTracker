@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text, String, Float, DateTime, Integer
 import requests
 from io import StringIO
 from datetime import datetime
+import re
 
 # 读取Excel文件并处理数据
 excel_file = "2025-07月至2025-09月病例数据统计表.xlsx"
@@ -146,11 +147,13 @@ for index, row in screened_patient_df.iterrows():
         # 提取手术相关信息
         surgeryDate = tables[2].iloc[0, 1]
         surgeryDuration = tables[2].iloc[3, 3]
+        surgeon = tables[2].iloc[0, 3]
         surgical_findings = tables[3].iloc[7, 0]
 
         # 更新DataFrame
         screened_patient_df.at[index, "surgeryDate"] = surgeryDate
         screened_patient_df.at[index, "surgeryDuration"] = surgeryDuration
+        screened_patient_df.at[index, "surgeon"] = surgeon
         screened_patient_df.at[index, "surgical_findings"] = surgical_findings
 
     except Exception as e:
@@ -174,6 +177,27 @@ print(
     ].head()
 )
 
+
+# %%
+# 创建picDir列，格式为：surgeryDate-name-mrn-surgon-primarySurgery
+
+screened_patient_df["picDir"] = (
+    screened_patient_df["surgeryDate"].astype(str)
+    + "-"
+    + screened_patient_df["name"].fillna("unknown")
+    + "-"
+    + screened_patient_df["mrn"].astype(str)
+    + "-"
+    + screened_patient_df["surgeon"].fillna("unknown")
+    + "-"
+    + screened_patient_df["primarySurgery"]
+    .fillna("unknown")
+    .astype(str)
+    .str.replace(r"\([^)]*\)", "", regex=True)
+    .str.strip()
+)
+
+
 # %%
 
 # 数据库类型映射
@@ -195,7 +219,9 @@ dtype_mapping = {
     "险种类型": String(20),
     "surgeryDate": DateTime(),
     "surgeryDuration": String(10),
+    "surgeon": String(10),
     "surgical_findings": String(255),
+    "picDir": String(255),
 }
 
 # 数据库连接和操作
@@ -212,45 +238,63 @@ engine = create_engine(
 
 # 获取现有记录并处理重复数据
 existing_adn = []
-if "adn" in screened_patient_df.columns:
-    with engine.connect() as conn:
-        try:
-            # 添加主键约束（如果需要）
-            try:
-                conn.execute(
-                    text("ALTER TABLE patient_admission_record ADD PRIMARY KEY (adn)")
+
+with engine.connect() as conn:
+    try:
+        # 检查表是否存在，如果不存在则创建
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS patient_admission_record (
+                    "adn" VARCHAR(50) PRIMARY KEY,
+                    "name" VARCHAR(20),
+                    "mrn" VARCHAR(50),
+                    "attending" VARCHAR(20),
+                    "surgeon" VARCHAR(10),
+                    "primaryDiagnose" VARCHAR(255),
+                    "primarySurgery" VARCHAR(255),
+                    "secondarySurgery" VARCHAR(255),
+                    "age" INTEGER,
+                    "admissionDate" DATE,
+                    "campus" VARCHAR(100),
+                    "series" VARCHAR(10),
+                    "DRG医疗总费用" FLOAT,
+                    "自费金额" FLOAT,
+                    "个人现金支付" FLOAT,
+                    "险种类型" VARCHAR(20),
+                    "surgeryDate" DATE,
+                    "surgeryDuration" INTEGER,
+                    "surgical_findings" VARCHAR(255),
+                    "picDir" VARCHAR(255)
                 )
-                conn.commit()
-            except Exception:
-                pass  # 主键可能已存在
-                conn.rollback()
-
-            # 查询现有adn
-            existing_adn = (
-                pd.read_sql("SELECT adn FROM patient_admission_record", conn)["adn"]
-                .astype(str)
-                .tolist()
+                """
             )
-        except Exception as e:
-            print(f"查询现有记录时出错: {e}")
-
-    # 筛选新数据
-    screened_patient_df["adn"] = screened_patient_df["adn"].astype(str)
-    new_data = screened_patient_df[
-        ~screened_patient_df["adn"].isin(existing_adn)
-    ].copy()
-
-    # 处理本地重复
-    if new_data.duplicated("adn").any():
-        print(
-            f"警告: 本地数据中发现{new_data.duplicated('adn').sum()}个重复的adn值，将只保留第一个出现的记录"
         )
-        new_data = new_data.drop_duplicates("adn", keep="first")
+        conn.commit()
+        print("patient_admission_record表创建成功或已存在")
 
-    print(f"筛选后共有{len(new_data)}条新记录待上传")
-else:
-    print("错误: DataFrame中不存在adn列")
-    new_data = pd.DataFrame()
+        # 查询现有adn
+        existing_adn = (
+            pd.read_sql("SELECT adn FROM patient_admission_record", conn)["adn"]
+            .astype(str)
+            .tolist()
+        )
+    except Exception as e:
+        print(f"创建表时出错: {e}")
+        conn.rollback()
+
+# 筛选新数据
+screened_patient_df["adn"] = screened_patient_df["adn"].astype(str)
+new_data = screened_patient_df[~screened_patient_df["adn"].isin(existing_adn)].copy()
+
+# 处理本地重复
+if new_data.duplicated("adn").any():
+    print(
+        f"警告: 本地数据中发现{new_data.duplicated('adn').sum()}个重复的adn值，将只保留第一个出现的记录"
+    )
+    new_data = new_data.drop_duplicates("adn", keep="first")
+
+print(f"筛选后共有{len(new_data)}条新记录待上传")
 
 # 上传数据
 try:
@@ -275,3 +319,6 @@ try:
         print("没有新的记录需要上传")
 except Exception as e:
     print(f"上传数据时出错: {e}")
+
+
+# %%
