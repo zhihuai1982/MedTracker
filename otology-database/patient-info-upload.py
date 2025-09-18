@@ -72,7 +72,7 @@ condition_empty = patient_info_df["primarySurgery"].str.strip() != "-"
 # 应用所有条件
 screened_patient_df = patient_info_df[
     (condition1 | condition2 | condition3) & condition_empty
-][:3].copy()
+][:5].copy()
 
 
 # 数据清洗和类型转换
@@ -176,13 +176,13 @@ print(
 )
 
 # %%
-# 创建picDir列，格式为：surgeryDate列（YYYY-MM）\surgeryDate-name-mrn-surgon-primarySurgery
+# 创建picdir列，格式为：surgeryDate列（YYYY-MM）\surgeryDate-name-mrn-surgon-primarySurgery
 
 # 创建YYYY-MM格式的日期字符串
 yyyy_mm = screened_patient_df["surgeryDate"].dt.strftime("%Y-%m")
 
-# 创建picDir列
-screened_patient_df["picDir"] = (
+# 创建picdir列
+screened_patient_df["picdir"] = (
     yyyy_mm
     + "\\"
     + screened_patient_df["surgeryDate"].dt.strftime("%Y-%m-%d")
@@ -213,8 +213,8 @@ os.makedirs(base_dir, exist_ok=True)
 # 遍历DataFrame创建文件夹
 for _, row in screened_patient_df.iterrows():
     try:
-        # 获取picDir值
-        pic_dir = row["picDir"]
+        # 获取picdir值
+        pic_dir = row["picdir"]
 
         # 构建完整的文件夹路径
         full_path = os.path.join(base_dir, pic_dir)
@@ -251,7 +251,7 @@ dtype_mapping = {
     "surgeryDuration": String(10),
     "surgeon": String(10),
     "surgical_findings": String(255),
-    "picDir": String(255),
+    "picdir": String(255),
 }
 
 # 数据库连接和操作
@@ -296,7 +296,7 @@ with engine.connect() as conn:
                     "surgeryDate" DATE,
                     "surgeryDuration" INTEGER,
                     "surgical_findings" VARCHAR(255),
-                    "picDir" VARCHAR(255)
+                    "picdir" VARCHAR(255)
                 )
                 """
             )
