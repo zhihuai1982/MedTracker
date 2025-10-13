@@ -20,6 +20,26 @@ two_weeks_later_str = (datetime.date.today() + datetime.timedelta(days=14)).strf
     "%Y-%m-%d"
 )
 
+# 定义需要的列
+required_columns = [
+    "patientname",
+    "patientid",
+    "isroom",
+    "diagnose",
+    "drremark",
+    "patientsex",
+    "patientage",
+    "attending",
+    "doctor",
+    "noticeflag",
+    "noticerecord",
+    "appointmentin",
+    "appoperativedate",
+    "applicationdate",
+    "arrangedate",
+    "dohoscode",
+    "patientphone",
+]
 
 appointment_patients = requests.get(
     f"http://20.21.1.224:5537/api/api/Public/GetCadippatientnoticelist/1/{two_weeks_ago_str}/{two_weeks_later_str}/5/33A/"
@@ -28,35 +48,69 @@ appointment_patients = requests.get(
 inpatient_patients = requests.get(
     f"http://20.21.1.224:5537/api/api/Public/GetCadippatientnoticelist/1/{two_weeks_ago_str}/{two_weeks_later_str}/7/33A/"
 ).json()
-# %%
 
-# 合并两个列表并转换为DataFrame
-combined_list = appointment_patients + inpatient_patients
-patient_df = pd.DataFrame(combined_list)[
-    [
-        "PatientName",
-        "PatientID",
-        "Isroom",
-        "Diagnose",
-        "drremark",
-        "PatientSex",
-        "PatientAge",
-        "Attending",
-        "Doctor",
-        "NoticeFlag",
-        "noticeRecord",
-        "AppointmentIn",
-        "AppOperativeDate",
-        "ApplicationDate",
-        "arrangedate",
-        "dohoscode",
-        "PatientPhone",
-    ]
-]
+sx_appointment_patients = requests.get(
+    f"http://40.22.2.60:5537/api/api/Public/GetCadippatientnoticelist/1/{two_weeks_ago_str}/{two_weeks_later_str}/5/33G/"
+).json()
 
-# 删除NoticeFlag为"取消"的行
-patient_df = patient_df[patient_df["NoticeFlag"] != "取消"]
+sx_inpatient_patients = requests.get(
+    f"http://40.22.2.60:5537/api/api/Public/GetCadippatientnoticelist/1/{two_weeks_ago_str}/{two_weeks_later_str}/7/33G/"
+).json()
 
+
+# 将所有数据的列名转换为小写并筛选指定列
+def process_patient_data(data, source_name):
+    if not data or not isinstance(data, list):
+        return []
+
+    processed_data = []
+    for item in data:
+        # 转换键为小写并只保留指定的列
+        processed_item = {}
+        for key, value in item.items():
+            lower_key = key.lower()
+            if lower_key in required_columns:
+                processed_item[lower_key] = value
+        # 添加来源信息
+        processed_item["source"] = source_name
+        processed_data.append(processed_item)
+
+    return processed_data
+
+
+# 处理所有数据源
+appointment_patients_processed = process_patient_data(
+    appointment_patients, "杭州院区门诊"
+)
+inpatient_patients_processed = process_patient_data(inpatient_patients, "杭州院区住院")
+sx_appointment_patients_processed = process_patient_data(
+    sx_appointment_patients, "绍兴院区门诊"
+)
+sx_inpatient_patients_processed = process_patient_data(
+    sx_inpatient_patients, "绍兴院区住院"
+)
+
+# 合并所有列表
+combined_list = (
+    appointment_patients_processed
+    + inpatient_patients_processed
+    + sx_appointment_patients_processed
+    + sx_inpatient_patients_processed
+)
+
+# 转换为DataFrame
+patient_df = pd.DataFrame(combined_list)
+
+# 确保所有必需的列都存在，不存在的列用NaN填充
+for column in required_columns:
+    if column not in patient_df.columns:
+        patient_df[column] = None
+
+# 重新排列列的顺序
+patient_df = patient_df[required_columns + ["source"]]
+
+# 删除noticeflag为"取消"的行
+patient_df = patient_df[patient_df["noticeflag"] != "取消"]
 
 # %%
 
@@ -93,21 +147,23 @@ name_mapping = {
     "3X218": "金茂",
     "3X236": "叶荆",
     "31231": "沈斌",
+    "993104": "司怡十美",
+    "73958": "吴玉婷",
 }
 
 # 创建包含name_mapping中所有医生姓名的列表
 doctor_names = list(name_mapping.values())
 
 # 转换Attending和Doctor列为姓名
-patient_df["Attending"] = patient_df["Attending"].astype(str).map(name_mapping)
-# 使用 map 方法转换 Doctor 列，未匹配到的用原值填充
-patient_df["Doctor"] = (
-    patient_df["Doctor"].astype(str).map(name_mapping).fillna(patient_df["Doctor"])
+patient_df["attending"] = patient_df["attending"].astype(str).map(name_mapping)
+# 使用 map 方法转换 doctor 列，未匹配到的用原值填充
+patient_df["doctor"] = (
+    patient_df["doctor"].astype(str).map(name_mapping).fillna(patient_df["doctor"])
 )
 
 
 # 修改统计逻辑为分层统计
-attending_stats = patient_df.groupby("Attending")
+attending_stats = patient_df.groupby("attending")
 
 # %%
 
@@ -117,30 +173,30 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'><br>�
 # combined_df 中的 ApplicationDate 格式为"2025-03-17T08:11:44", 筛选出当天日期的行
 today = datetime.date.today().strftime("%Y-%m-%d")
 # today = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-today_patients = patient_df[patient_df["ApplicationDate"].str.startswith(today)]
+today_patients = patient_df[patient_df["applicationdate"].str.startswith(today)]
 
 # 使用today_rows代替combined_df进行当日统计
-attending_stats_today = today_patients.groupby("Attending")
+attending_stats_today = today_patients.groupby("attending")
 for attending, group in attending_stats_today:
     pContent += f"<br>================================<br>==  {attending}（{len(group)}）<br>================================<br><br>"
 
     # 统计逻辑保持相同结构
-    doctor_counts = group.groupby("Doctor").size()
-    diagnosis_counts = group.groupby(["Doctor", "Diagnose"]).size()
+    doctor_counts = group.groupby("doctor").size()
+    diagnosis_counts = group.groupby(["doctor", "diagnose"]).size()
 
     for doctor in doctor_counts.index:
         pContent += f"<b>{doctor} - {doctor_counts[doctor]}</b><br>"
-        diag_counts = diagnosis_counts.xs(doctor, level="Doctor")
+        diag_counts = diagnosis_counts.xs(doctor, level="doctor")
         for diag, count in diag_counts.items():
             # 获取当前诊断下的患者姓名和病历号列表
             patient_info = group[
-                (group["Doctor"] == doctor) & (group["Diagnose"] == diag)
-            ][["PatientName", "PatientID"]]
+                (group["doctor"] == doctor) & (group["diagnose"] == diag)
+            ][["patientname", "patientid"]]
             patient_list = ", ".join(
                 [
                     f"{name}({id})"
                     for name, id in zip(
-                        patient_info["PatientName"], patient_info["PatientID"]
+                        patient_info["patientname"], patient_info["patientid"]
                     )
                 ]
             )
@@ -186,11 +242,11 @@ if all_surgery_data:
     # 创建一个映射字典，键为PatientID，值为Doctor
     # 为确保数据类型一致，将PatientID和mrn都转换为字符串类型
     patient_doctor_mapping = dict(
-        zip(patient_df["PatientID"].astype(str), patient_df["Doctor"].astype(str))
+        zip(patient_df["patientid"].astype(str), patient_df["doctor"].astype(str))
     )
 
     # 将Doctor信息添加到surgery_df中，同样将mrn转换为字符串类型以确保匹配
-    surgery_df["Doctor"] = (
+    surgery_df["doctor"] = (
         surgery_df["mrn"].astype(str).map(patient_doctor_mapping).fillna("未知")
     )
 
@@ -215,7 +271,7 @@ if all_surgery_data:
                 doctor_data = doctor_data.sort_values(["room", "cdo"])
 
                 for _, row in doctor_data.iterrows():
-                    pContent += f"┗ 【{row['room']}-{row['cdo']}】 {row['pname']} - {row['mrn']} - {row['Doctor']} <br> 手术: {row['operp']} - 状态: {row['oper_statics']}<br>"
+                    pContent += f"┗ 【{row['room']}-{row['cdo']}】 {row['pname']} - {row['mrn']} - {row['doctor']} <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;手术: {row['operp']} - <b>{row['oper_statics']}</b><br>"
 
                 pContent += "<br>"
     else:
@@ -231,16 +287,16 @@ for attending, group in attending_stats:
     pContent += f"<br>================================<br>==  {attending}（{len(group)}）<br>================================<br><br>"
 
     # 先统计医生总数
-    doctor_counts = group.groupby("Doctor").size()
+    doctor_counts = group.groupby("doctor").size()
     # 再统计每个医生的诊断分布
-    diagnosis_counts = group.groupby(["Doctor", "Diagnose"]).size()
+    diagnosis_counts = group.groupby(["doctor", "diagnose"]).size()
 
     # 修改循环为按数量降序输出
     for doctor in doctor_counts.sort_values(ascending=False).index:  # 新增排序
         # 输出医生总数
         pContent += f"<b>{doctor} - {doctor_counts[doctor]}</b><br>"
         # 输出该医生的诊断分布
-        diag_counts = diagnosis_counts.xs(doctor, level="Doctor")
+        diag_counts = diagnosis_counts.xs(doctor, level="doctor")
         for diag, count in diag_counts.items():
             pContent += f"┗ {diag} - {count}<br>"
 
