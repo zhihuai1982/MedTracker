@@ -107,7 +107,7 @@ for index, row in dong_df.iterrows():
 
         # 使用正则表达式提取手术名称
         surgery_name_match = re.search(
-            r"手术代码:.+?手术名称:(.+?)收费代码:", nur_doc_data, re.DOTALL
+            r"术后诊断:.+?手术名称:(.+?)收费代码:", nur_doc_data, re.DOTALL
         )
 
         if surgery_name_match:
