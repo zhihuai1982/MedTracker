@@ -95,6 +95,9 @@ name_mapping = {
     "31231": "沈斌",
 }
 
+# 创建包含name_mapping中所有医生姓名的列表
+doctor_names = list(name_mapping.values())
+
 # 转换Attending和Doctor列为姓名
 patient_df["Attending"] = patient_df["Attending"].astype(str).map(name_mapping)
 # 使用 map 方法转换 Doctor 列，未匹配到的用原值填充
@@ -143,6 +146,84 @@ for attending, group in attending_stats_today:
             )
             pContent += f"┗ {diag} - {count}      【{patient_list}】<br>"
 
+
+# %%
+# 定义各院区的API端点
+hospital_endpoints = {
+    "庆春院区": f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/1/A001/{today}",
+    "钱塘院区": f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77A/1/A002/{today}",
+    "大运河院区": f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77F/1/A008/{today}",
+    "绍兴院区": f"http://40.22.2.60:5537/api/api/Oper/GetOperArrange/77G/1/A009/{today}",
+}
+
+# 收集所有院区的手术安排数据
+all_surgery_data = []
+
+for hospital_name, endpoint in hospital_endpoints.items():
+    try:
+        response = requests.get(endpoint)
+        if response.status_code == 200:
+            surgery_data = response.json()
+            # 为每条记录添加院区信息
+            for record in surgery_data:
+                record["hospital"] = hospital_name
+            all_surgery_data.extend(surgery_data)
+        else:
+            print(f"获取{hospital_name}数据失败，状态码: {response.status_code}")
+    except Exception as e:
+        print(f"获取{hospital_name}数据时出错: {e}")
+
+# 将手术数据转换为DataFrame
+if all_surgery_data:
+    surgery_df = pd.DataFrame(all_surgery_data)
+
+    # 提取需要的字段
+    surgery_df = surgery_df[
+        ["room", "cdo", "pname", "operp", "oper_statics", "mrn", "name", "hospital"]
+    ]
+
+    # 在这里添加新代码：通过mrn和PatientID匹配，将patient_df中的Doctor信息添加到surgery_df中
+    # 创建一个映射字典，键为PatientID，值为Doctor
+    # 为确保数据类型一致，将PatientID和mrn都转换为字符串类型
+    patient_doctor_mapping = dict(
+        zip(patient_df["PatientID"].astype(str), patient_df["Doctor"].astype(str))
+    )
+
+    # 将Doctor信息添加到surgery_df中，同样将mrn转换为字符串类型以确保匹配
+    surgery_df["Doctor"] = (
+        surgery_df["mrn"].astype(str).map(patient_doctor_mapping).fillna("未知")
+    )
+
+    # 筛选name列内容包含在doctor_names里的行
+    surgery_filtered = surgery_df[surgery_df["name"].isin(doctor_names)]
+
+    # 将筛选结果格式化输出到pContent
+    if not surgery_filtered.empty:
+        pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'><br>今日手术安排</h1>\n<!-- /wp:heading -->\n"
+
+        # 按院区分组显示
+        for hospital in surgery_filtered["hospital"].unique():
+            hospital_data = surgery_filtered[surgery_filtered["hospital"] == hospital]
+            pContent += f"<br>================================<br>==  {hospital}（{len(hospital_data)}台手术）<br>================================<br><br>"
+
+            # 按医生分组显示
+            for name in hospital_data["name"].unique():
+                doctor_data = hospital_data[hospital_data["name"] == name]
+                pContent += f"<b>{name} - {len(doctor_data)}台手术</b><br>"
+
+                # 按room和cdo排序
+                doctor_data = doctor_data.sort_values(["room", "cdo"])
+
+                for _, row in doctor_data.iterrows():
+                    pContent += f"┗ 【{row['room']}-{row['cdo']}】 {row['pname']} - {row['mrn']} - {row['Doctor']} <br> 手术: {row['operp']} - 状态: {row['oper_statics']}<br>"
+
+                pContent += "<br>"
+    else:
+        pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'><br>今日手术安排</h1>\n<!-- /wp:heading -->\n"
+        pContent += "<br>今日无手术安排<br><br>"
+
+
+# %%
 pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'><br>月度预约病例</h1>\n<!-- /wp:heading -->\n"
 
 
