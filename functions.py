@@ -525,8 +525,8 @@ def get_nurse_doc(mrn, series):
 
     response = requests.get(nurseUrl)
 
-    # 使用正则表达式匹配和提取字符串
-    pattern = r"【过敏史】:(.*?)【个人史】"
+    # 使用正则表达式匹配距离【个人史】前面最近的【过敏史】之间的内容
+    pattern = r"【基本生命体征】.*【过敏史】:(.*?)【个人史】"
     content = re.search(pattern, response.text, re.S)
 
     if content:
