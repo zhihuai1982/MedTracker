@@ -107,7 +107,7 @@ for index, row in dong_df.iterrows():
 
         # 使用正则表达式提取手术名称
         surgery_name_match = re.search(
-            r"术后诊断:.+?手术名称:(.+?)收费代码:", nur_doc_data, re.DOTALL
+            r"术后诊断:.+?手术名称:(.+?)手术收费名:", nur_doc_data, re.DOTALL
         )
 
         if surgery_name_match:
@@ -399,11 +399,18 @@ for entry in summary_data:  # 取最近添加的数据
     pContent += f"</tr>"
 
     summary_df = pd.DataFrame(summary_data)
-    surgery_level_counts = summary_df["max手术级别"].value_counts().sort_index()
+    # 处理可能的空值和非数字值
+    surgery_level_series = summary_df["max手术级别"].copy()
+    surgery_level_series = (
+        pd.to_numeric(surgery_level_series, errors="coerce").fillna(0).astype(int)
+    )
+    surgery_level_counts = surgery_level_series.value_counts().sort_index()
+
     level_strings = []
     for level, count in surgery_level_counts.items():
-        if isinstance(level, int) and count > 0:
-            level_strings.append(f"{level}级{count}个")
+        # 确保level是整数且大于0才添加到结果中
+        if isinstance(level, (int, float)) and level > 0 and count > 0:
+            level_strings.append(f"{int(level)}级{count}个")
 
     # 合并为单个字符串
     surgery_level_summary = (
