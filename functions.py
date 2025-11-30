@@ -2258,18 +2258,18 @@ def inout(mrn, series, idList, query):
 ####################
 
 
-def saturday_surgical_arrange(pList, attending, aName):
+def qc_surgical_arrange(pList, attending, aName):
 
     today = datetime.date.today() + datetime.timedelta(days=0)
 
     # 获取今天是星期几（0=星期一，6=星期日）
     weekday = today.weekday()
 
-    # 统一使用 relativedelta 计算最近的周六
-    lastSurgeryDate = today + rd.relativedelta(weekday=rd.SA(-1))  # 上一个周六
-    prelastSurgeryDate = today + rd.relativedelta(weekday=rd.SA(-2))  # 上上一个周六
-    upcomingSurgeryDate = today + rd.relativedelta(weekday=rd.SA(+1))  # 下一个周六
-    nextSurgeyDate = today + rd.relativedelta(weekday=rd.SA(+2))  # 下下一个周六
+    # 统一使用 relativedelta 计算最近的周一
+    lastSurgeryDate = today + rd.relativedelta(weekday=rd.MO(-1))  # 上一个周一
+    prelastSurgeryDate = today + rd.relativedelta(weekday=rd.MO(-2))  # 上上一个周一
+    upcomingSurgeryDate = today + rd.relativedelta(weekday=rd.MO(+1))  # 下一个周一
+    nextSurgeyDate = today + rd.relativedelta(weekday=rd.MO(+2))  # 下下一个周一
 
     # print(today, today.weekday() + 1)
     # print(prelastSurgeryDate, prelastSurgeryDate.weekday() + 1)
