@@ -1626,7 +1626,7 @@ def surgical_arrange(pList, attending, aName):
         ).json()
     )
 
-    surgeons = ["周明光", "董志怀", "肖芒", "金茂", "叶荆"]
+    surgeons = ["胡孙宏", "董志怀", "潘虹"]
 
     prelastSurgeryList = prelastSurgeryList[
         ["mrn", "pname", "room", "cdo", "operp", "name", "plandate"]

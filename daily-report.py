@@ -271,7 +271,7 @@ if all_surgery_data:
                 doctor_data = doctor_data.sort_values(["room", "cdo"])
 
                 for _, row in doctor_data.iterrows():
-                    pContent += f"┗ 【{row['room']}-{row['cdo']}】 {row['pname']} - {row['mrn']} - {row['doctor']} <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;手术: {row['operp']} - <b>{row['oper_statics']}</b><br>"
+                    pContent += f"┗ 【{row['room']}-{row['cdo']}】 {row['pname']}-{row['mrn']}-{row['doctor']} <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;手术: <span style='color:purple'>{row['operp']}</span> - <b>{row['oper_statics']}</b><br>"
 
                 pContent += "<br>"
     else:
