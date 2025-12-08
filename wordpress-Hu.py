@@ -67,7 +67,7 @@ for item in tpList:
 # http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30046/33A/A002
 
 hpListRaw = requests.get(
-    "http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30259/33/A002",
+    "http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30044/33/A002",
     headers=headers,
 ).json()
 
@@ -104,7 +104,7 @@ pList["h2name"] = (
 
 
 # 筛出保留 pList 中 tdiag 包含 dzh 的列
-pList = pList[pList["tdiag"].str.contains("dzh", case=False, na=False)]
+# pList = pList[pList["tdiag"].str.contains("dzh", case=False, na=False)]
 
 # pList 根据  bedid 列逆序排列
 pList = pList.sort_values(by="bedid", ascending=False)
@@ -128,13 +128,13 @@ pList = pList.sort_values(by="bedid", ascending=False)
 # pList 删除 mrn 为s 33565 的行
 # pList = pList[pList['mrn'] != 4009984]
 
-# pList = pList.iloc[:3]
+# pList = pList.iloc[:1]
 
 # %%
 
 pContent = ""
 
-pContent += "<!-- wp:heading {'level':1} -->\n<div id='xiao-notes'><h1 class='wp-block-heading'>肖组备注</h1></div>\n<!-- /wp:heading -->\n"
+pContent += "<!-- wp:heading {'level':1} -->\n<div id='xiao-notes'><h1 class='wp-block-heading'>胡组备注</h1></div>\n<!-- /wp:heading -->\n"
 
 for index, row in pList.iterrows():
 
@@ -254,7 +254,7 @@ pContent += "<!-- wp:heading {'level':1} -->\n<h1 class='wp-block-heading'>手�
 
 
 arrangeList, arrangeListHtml, upcomingSurgeryDate_str = qc_surgical_arrange(
-    pList, 30259, "董志怀"
+    pList, 30044, "董志怀"
 )
 
 pContent += "<div class='table_container'> " + arrangeListHtml + "</div>\n"
@@ -299,6 +299,22 @@ if not rj_df.empty:
             + get_exam_results(row["mrn"], 30)
             + "</div>\n"
         )
+
+
+# %%
+# 将pContent中“左”的背景颜色改为红色，“右”的背景颜色改为绿色，文字改为白色，字号改为1.5倍
+
+pContent = re.sub(
+    r"左",
+    r'<span style="background-color:red;color:white;font-size:1.5em">左</span>',
+    pContent,
+)
+
+pContent = re.sub(
+    r"右",
+    r'<span style="background-color:#008000;color:white;font-size:1.5em">右</span>',
+    pContent,
+)
 
 
 # %%

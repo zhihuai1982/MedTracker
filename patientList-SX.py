@@ -14,7 +14,7 @@ headers = {
 # 而在requests库中，不用json.loads方法进行反序列化
 # 而是提供了响应对象的json方法，用来对json格式的响应体进行反序列化，获得list
 hpListRaw = requests.get(
-    "http://20.21.1.224:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30047/33A/A002",
+    "http://40.22.2.60:5537/api/api/Bed/GetPatientList/%E5%8C%BB%E7%96%97%E7%BB%84/30295/33G/A009",
     headers=headers,
 ).json()
 

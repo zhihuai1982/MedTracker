@@ -5,6 +5,7 @@ import json
 import base64
 import pandas as pd
 import datetime
+from dateutil.relativedelta import relativedelta, MO
 import xml.etree.ElementTree as ET
 
 # from collections import defaultdict
@@ -17,12 +18,12 @@ pContent = ""
 today = datetime.datetime.today() + datetime.timedelta(days=0)
 today_str = today.strftime("%Y-%m-%d")
 
-# 生成明天日期字符串
-tomorrow = datetime.datetime.today() + datetime.timedelta(days=1)
-tomorrow_str = tomorrow.strftime("%Y-%m-%d")
+# 生成最近的周一日期字符串
+next_monday = datetime.date.today() + relativedelta(weekday=MO(0))
+next_monday_str = next_monday.strftime("%Y-%m-%d")
 
 oper_url = (
-    f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{tomorrow_str}"
+    f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{next_monday_str}"
 )
 
 url = "http://192.1.3.110:8080/Zqtys/GetModelListServlet"
@@ -41,6 +42,7 @@ try:
     if oper_response.status_code == 200:
         oper_data = oper_response.json()
         oper_df = pd.DataFrame(oper_data)
+        # print(oper_df)
         filtered_oper = oper_df[oper_df["name"] == "董志怀"]
 
         # 新增：创建整合表格
@@ -90,6 +92,12 @@ try:
         # 打印整合后的表格
         if combined_consents:
             final_df = pd.DataFrame(combined_consents)
+
+            # 筛选签署日期在最近3天内的记录
+            three_days_ago = datetime.datetime.now() - datetime.timedelta(days=3)
+            final_df["签署日期"] = pd.to_datetime(final_df["签署日期"])
+            final_df = final_df[final_df["签署日期"] >= three_days_ago]
+
             # 将控制台输出转为HTML格式
             pContent += "\n<hr>\n<h2>患者知情同意书汇总表</h2>\n"
             pContent += (
@@ -113,7 +121,7 @@ try:
                 # 文书信息行
                 bg_color = (
                     "#ffe5e5"
-                    if "手术知情同意书" in row["文书名称"]
+                    if "术知情同意书" in row["文书名称"]
                     else "#e5ffe5" if "患者知情选择书" in row["文书名称"] else "#ffffff"
                 )
                 pContent += f"<tr style='background-color: {bg_color}'>"
@@ -130,7 +138,7 @@ except requests.exceptions.RequestException as e:
     print(f"手术安排请求异常：{str(e)}")
 
 # %% 新入院患者API请求
-admission_url = f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{today_str}/{tomorrow_str}/7/33/30259/"
+admission_url = f"http://20.21.1.224:5537/api/api/Public/GetCadippatientAttending/1/{today_str}/{next_monday_str}/7/33/30044/"
 admission_response = requests.get(admission_url)
 admission_data = admission_response.json()
 
@@ -143,7 +151,7 @@ admission_df["PatientID"] = admission_df["PatientID"].astype("int64")
 # 手术知情同意书详情请求
 
 # 筛选包含手术知情同意书的记录
-surgical_consents = final_df[final_df["文书名称"].str.contains("手术知情同意书")]
+surgical_consents = final_df[final_df["文书名称"].str.contains("术知情同意书")]
 
 if not surgical_consents.empty:
     for _, row in surgical_consents.iterrows():
