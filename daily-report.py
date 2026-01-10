@@ -25,6 +25,8 @@ required_columns = [
     "patientname",
     "patientid",
     "isroom",
+    "codelist",
+    "secoffice",
     "diagnose",
     "drremark",
     "patientsex",
@@ -59,36 +61,24 @@ sx_inpatient_patients = requests.get(
 
 
 # 将所有数据的列名转换为小写并筛选指定列
-def process_patient_data(data, source_name):
-    if not data or not isinstance(data, list):
-        return []
+def process_patient_data(data):
+    if isinstance(data, dict) and "Data" in data:
+        data = data["Data"]
 
+    # 将列名转换为小写
     processed_data = []
     for item in data:
-        # 转换键为小写并只保留指定的列
-        processed_item = {}
-        for key, value in item.items():
-            lower_key = key.lower()
-            if lower_key in required_columns:
-                processed_item[lower_key] = value
-        # 添加来源信息
-        processed_item["source"] = source_name
-        processed_data.append(processed_item)
-
+        if isinstance(item, dict):
+            lower_item = {k.lower(): v for k, v in item.items()}
+            processed_data.append(lower_item)
     return processed_data
 
 
-# 处理所有数据源
-appointment_patients_processed = process_patient_data(
-    appointment_patients, "杭州院区门诊"
-)
-inpatient_patients_processed = process_patient_data(inpatient_patients, "杭州院区住院")
-sx_appointment_patients_processed = process_patient_data(
-    sx_appointment_patients, "绍兴院区门诊"
-)
-sx_inpatient_patients_processed = process_patient_data(
-    sx_inpatient_patients, "绍兴院区住院"
-)
+appointment_patients_processed = process_patient_data(appointment_patients)
+inpatient_patients_processed = process_patient_data(inpatient_patients)
+sx_appointment_patients_processed = process_patient_data(sx_appointment_patients)
+sx_inpatient_patients_processed = process_patient_data(sx_inpatient_patients)
+
 
 # 合并所有列表
 combined_list = (
@@ -100,6 +90,25 @@ combined_list = (
 
 # 转换为DataFrame
 patient_df = pd.DataFrame(combined_list)
+
+
+# 添加source列，根据secoffice列内容确定院区
+def determine_source(secoffice_val):
+    if pd.isna(secoffice_val):
+        return None
+    secoffice_str = str(secoffice_val)
+    if "A" in secoffice_str:
+        return "钱塘院区"
+    elif "F" in secoffice_str:
+        return "大运河院区"
+    elif "G" in secoffice_str:  # 注意：根据用户描述，这里应该是G而不是缺失的内容
+        return "绍兴院区"
+    else:
+        return "庆春院区"  # 默认值
+
+
+patient_df["source"] = patient_df["secoffice"].apply(determine_source)
+
 
 # 确保所有必需的列都存在，不存在的列用NaN填充
 for column in required_columns:
@@ -191,12 +200,15 @@ for attending, group in attending_stats_today:
             # 获取当前诊断下的患者姓名和病历号列表
             patient_info = group[
                 (group["doctor"] == doctor) & (group["diagnose"] == diag)
-            ][["patientname", "patientid"]]
+            ][["patientname", "patientid", "source", "secoffice"]]
             patient_list = ", ".join(
                 [
-                    f"{name}({id})"
-                    for name, id in zip(
-                        patient_info["patientname"], patient_info["patientid"]
+                    f"{name}({id})[{source}({secoffice})]"
+                    for name, id, source, secoffice in zip(
+                        patient_info["patientname"],
+                        patient_info["patientid"],
+                        patient_info["source"],
+                        patient_info["secoffice"],
                     )
                 ]
             )
@@ -293,8 +305,18 @@ for attending, group in attending_stats:
 
     # 修改循环为按数量降序输出
     for doctor in doctor_counts.sort_values(ascending=False).index:  # 新增排序
+        # 计算当前医生的院区分布
+        doctor_group = group[group["doctor"] == doctor]
+        hospital_counts = doctor_group["source"].value_counts()
+        hospital_info = ", ".join(
+            [f"{hos}（{count}）" for hos, count in hospital_counts.items()]
+        )
+
         # 输出医生总数
-        pContent += f"<b>{doctor} - {doctor_counts[doctor]}</b><br>"
+        pContent += f"<b>{doctor} - {doctor_counts[doctor]}"
+        if hospital_info:
+            pContent += f" [{hospital_info}]"
+        pContent += "</b><br>"
         # 输出该医生的诊断分布
         diag_counts = diagnosis_counts.xs(doctor, level="doctor")
         for diag, count in diag_counts.items():
