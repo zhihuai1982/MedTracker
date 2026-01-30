@@ -103,7 +103,7 @@ pList["h2name"] = (
 )
 
 # pList 根据  bedid 列逆序排列
-pList = pList.sort_values(by="bedid", ascending=False)
+pList = pList.sort_values(by="bedid", ascending=True)
 
 # 自定义排序规则（W后>90的按升序排在前面
 # def create_sort_key(bedid):

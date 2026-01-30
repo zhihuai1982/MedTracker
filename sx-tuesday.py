@@ -18,20 +18,20 @@ level_df = pd.read_csv("level2-4.csv")
 
 # %%
 
-# 计算本月的周一日期
+# 计算本月的周二日期
 today = datetime.date.today()
 first_day = today.replace(day=1)
 next_month = first_day + relativedelta(months=1)
 last_day = next_month - datetime.timedelta(days=1)
 
-mondays = []
+tuesdays = []
 current_day = first_day
 while current_day <= last_day:
-    if current_day.weekday() == 0:  # 0代表周一
-        mondays.append(current_day.strftime("%Y-%m-%d"))
+    if current_day.weekday() == 1:  # 1代表周二
+        tuesdays.append(current_day.strftime("%Y-%m-%d"))
     current_day += datetime.timedelta(days=1)
 
-# 计算上个月的周一日期
+# 计算上个月的周二日期
 
 today = datetime.date.today()
 # 获取上个月的第一天（当前月第一天减去1个月）
@@ -40,39 +40,40 @@ first_day_of_last_month = today.replace(day=1) - relativedelta(months=1)
 last_day_of_last_month = (
     first_day_of_last_month + relativedelta(months=1) - datetime.timedelta(days=1)
 )
-mondays = []
+tuesdays = []
 current_day = first_day_of_last_month
 while current_day <= last_day_of_last_month:
-    if current_day.weekday() == 0:  # 0代表周一
-        mondays.append(current_day.strftime("%Y-%m-%d"))
+    if current_day.weekday() == 1:  # 1代表周二
+        tuesdays.append(current_day.strftime("%Y-%m-%d"))
     current_day += datetime.timedelta(days=1)
 
 # === 新增数据获取部分 ===
 all_data = []
 
 # 原数据获取循环（约50-91行）
-for monday_date in mondays:
-    url = f"http://20.21.1.224:5537/api/api/Oper/GetOperArrange/77/5/A001/{monday_date}"
+for tuesday_date in tuesdays:
+    url = (
+        f"http://40.22.2.60:5537/api/api/Oper/GetOperArrange/77G/5/A009/{tuesday_date}"
+    )
     try:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            # 为每条数据添加周一日期标识
+            # 为每条数据添加周二日期标识
             for item in data:
-                item["monday_date"] = monday_date
+                item["tuesday_date"] = tuesday_date
             all_data.extend(data)
         else:
-            print(f"请求失败：{monday_date}，状态码：{response.status_code}")
+            print(f"请求失败：{tuesday_date}，状态码：{response.status_code}")
     except Exception as e:
-        print(f"请求异常：{monday_date}，错误信息：{str(e)}")
+        print(f"请求异常：{tuesday_date}，错误信息：{str(e)}")
 
 # 创建DataFrame
 df = pd.DataFrame(all_data)
 
 # === 新增筛选代码 ===
 # 筛选姓名为董志怀的记录
-dong_df = df[df["name"] == "董志怀"]
-# dong_df = df[df["name"] == "沈斌"]
+dong_df = df[df["name"] == "姜晓华"]
 
 # %%
 
@@ -92,7 +93,7 @@ for index, row in dong_df.iterrows():
 
     # 在获取 patientInfo 后添加以下代码
     # 通过 http://20.21.1.224:5537/api/api/Physiorcd/GetNurDoc/{row['mrn']}/{row['series']} 获取结果
-    nur_doc_url = f"http://20.21.1.224:5537/api/api/Physiorcd/GetNurDoc/{row['mrn']}/{row['series']}"
+    nur_doc_url = f"http://40.22.2.60:5537/api/api/Physiorcd/GetNurDoc/{row['mrn']}/{row['series']}"
     nur_doc_response = requests.get(nur_doc_url)
 
     if nur_doc_response.status_code == 200:
@@ -158,7 +159,7 @@ for index, row in dong_df.iterrows():
 
     # # 通过 http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid=row["mrn"]-row["series"]-&pageSourceType=THD&hosCode=A002 接口获取患者信息
     patientInfo = requests.get(
-        f"http://192.1.3.210/api/drg/thd/v1/patientInfoDetail?pid={row['mrn']}-{row['series']}-&pageSourceType=THD&hosCode=A001",
+        f"http://40.22.3.33/api/drg/thd/v1/patientInfoDetail?pid={row['mrn']}-{row['series']}-&pageSourceType=THD&hosCode=H33060401604",
         headers=headers,
     ).json()  # 添加.json()将响应转换为字典
 
@@ -272,7 +273,7 @@ for index, row in dong_df.iterrows():
         "DRG倍率": 0,
         "预计结余": 0,
         "手术费用": surgery_cost,
-        "monday_date": row["monday_date"],  # 修改为周一日期字段
+        "tuesday_date": row["tuesday_date"],  # 修改为周二日期字段
     }
 
     # 遍历 forecasts 获取 DRGS 数据
@@ -304,11 +305,11 @@ from collections import defaultdict
 
 weekly_groups = defaultdict(list)
 for entry in summary_data:
-    weekly_groups[entry["monday_date"]].append(entry)
+    weekly_groups[entry["tuesday_date"]].append(entry)
 
-# 生成每周一分表
-for monday, entries in weekly_groups.items():
-    pContent += f"<br><h2>{monday} 周汇总表</h2>"
+# 生成每周二分表
+for tuesday, entries in weekly_groups.items():
+    pContent += f"<br><h2>{tuesday} 周汇总表</h2>"
     pContent += "<table style='border-collapse: collapse; width: 100%;'>"
     pContent += "<tr style='background-color: #f2f2f2;'><th>姓名-病历号</th><th>诊断</th><th>max手术名称</th><th>max手术级别</th><th>总费用</th><th>DRG倍率</th><th>预计结余</th><th>手术费</th></tr>"
 
@@ -454,7 +455,7 @@ header = {"Authorization": "Basic " + token.decode("utf-8")}
 
 # 读取/更新文章ID
 try:
-    with open("qc-monday.json", "r") as f:
+    with open("sx-tuesday.json", "r") as f:
         jsondata = json.load(f)
         today_post_id = (
             jsondata.get("id")
@@ -471,7 +472,7 @@ post_url = (
     f"https://wordpress.digitalnomad.host:1501/wp-json/wp/v2/posts/{today_post_id}"
 )
 post_data = {
-    "title": f"庆春院区 - Monday - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+    "title": f"绍兴院区 - tuesday - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
     "status": "publish",
     "content": pContent,
 }
@@ -480,7 +481,7 @@ response = requests.post(post_url, headers=header, json=post_data, verify=False)
 
 # 保存响应信息
 if response.status_code in [200, 201]:
-    with open("qc-monday.json", "w") as f:
+    with open("sx-tuesday.json", "w") as f:
         json.dump(
             {
                 "id": response.json().get("id"),
