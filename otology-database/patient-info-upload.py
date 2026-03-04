@@ -8,7 +8,7 @@ import re
 import os
 
 # 读取Excel文件并处理数据
-excel_file = "2025-07月至2025-09月病例数据统计表.xlsx"
+excel_file = "2025-01月至2025-10月病例数据统计表.xlsx"
 df = pd.read_excel(excel_file, skiprows=1, header=0)
 
 # 定义列名映射
@@ -44,6 +44,12 @@ column_mapping = {
 # 提取并处理数据
 patient_info_df = df[existing_columns].rename(columns=column_mapping).copy()
 
+# 创建要删除的adn列表
+adn_to_remove = ["9458578-4"]  # 请替换为实际要删除的adn值
+
+# 过滤掉adn在删除列表中的行
+patient_info_df = patient_info_df[~patient_info_df["adn"].isin(adn_to_remove)]
+
 # 提取series列
 patient_info_df["series"] = patient_info_df["adn"].apply(
     lambda x: str(x).split("-")[-1] if "-" in str(x) else str(x)
@@ -72,7 +78,7 @@ condition_empty = patient_info_df["primarySurgery"].str.strip() != "-"
 # 应用所有条件
 screened_patient_df = patient_info_df[
     (condition1 | condition2 | condition3) & condition_empty
-][:5].copy()
+].copy()
 
 
 # 数据清洗和类型转换
@@ -86,6 +92,12 @@ screened_patient_df = screened_patient_df.astype(
         "个人现金支付": "float",
     }
 )
+
+# 将primarySurgery列中的英文逗号替换为中文逗号
+screened_patient_df["primarySurgery"] = screened_patient_df[
+    "primarySurgery"
+].str.replace(",", "，")
+
 screened_patient_df["age"] = (
     screened_patient_df["age"].str.replace("岁", "").astype(int)
 )
@@ -163,8 +175,15 @@ for index, row in screened_patient_df.iterrows():
         continue
 
 screened_patient_df["surgeryDuration"] = (
-    screened_patient_df["surgeryDuration"].str.replace("分", "").astype(int)
+    screened_patient_df["surgeryDuration"]
+    .fillna("")  # First, replace None values with empty strings
+    .str.replace("分", "")
+    .str.strip()
+    .replace("", "0")  # Replace empty strings with "0"
+    .astype(int)
 )
+
+
 screened_patient_df["surgeryDate"] = pd.to_datetime(screened_patient_df["surgeryDate"])
 
 # 数据预览（包含手术信息）

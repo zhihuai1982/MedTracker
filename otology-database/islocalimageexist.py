@@ -59,3 +59,26 @@ try:
 
 except Exception as e:
     print(f"处理过程中出错: {e}")
+
+
+# %%
+# 下载 examination_record 表到 examination_record.csv 中
+try:
+    print("\n开始从数据库下载examination_record表...")
+    # 使用现有的数据库连接引擎读取表数据
+    with engine.connect() as conn:
+        # 读取整个examination_record表
+        examination_df = pd.read_sql_table("examination_record", conn)
+
+        # 保存到CSV文件
+        examination_df[examination_df["isLocalImageExist"] == "false"].to_csv(
+            "examination_record.csv", index=False, encoding="utf-8-sig"
+        )
+
+        print(
+            f"成功下载{len(examination_df[examination_df['isLocalImageExist'] == 'false'])}条记录到examination_record.csv文件"
+        )
+except Exception as e:
+    print(f"下载examination_record表时出错: {e}")
+
+# %%

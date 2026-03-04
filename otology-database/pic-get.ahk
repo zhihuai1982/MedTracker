@@ -81,23 +81,32 @@ ProcessCSV() {
         picname := data[picnameIndex]
 
         ; 输入检查号
-        Click 136, 176, 2
+        loop {
+            Click 136, 176
+            Send "aaa"
+            Sleep 300
+            Send "^a"
+            Sleep 500
+        } until PixelGetColor(120, 172) == 0x3390FF ;
         Sleep 500
         Send repo
         Sleep 500
         Send "{Enter}"
         Sleep 5000
 
-        Click 1177, 283 ; 点击下载
-        Sleep 5000
-        SendText "D:\otology-pic\" . picdir . "\" . picname . ".jpg"
-        Sleep 1000
-        Send "{Enter}"
-        Sleep 2000
-        Send "+{Tab}"
-        Sleep 500
-        Send "{Enter}"
-        sleep 5000
+        ; 检查坐标点(567, 309)的颜色是否为F7F7F7，如果是则跳过下载
+        if (PixelGetColor(567, 309) != "0xF7F7F7") {
+            Click 1177, 283 ; 点击下载
+            Sleep 5000
+            SendText "D:\otology-pic\" . picdir . "\" . picname . ".jpg"
+            Sleep 1000
+            Send "{Enter}"
+            Sleep 2000
+            Send "+{Tab}"
+            Sleep 500
+            Send "{Enter}"
+            sleep 5000
+        }
 
         ; 或者在控制台显示（如果运行在控制台模式下）
         ; OutputDebug "repo: " . repo . "\npicdir: " . picdir . "\npicname: " . picname . "\n"

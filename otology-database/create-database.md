@@ -183,25 +183,37 @@ WHERE "isLocalImageExist" IS NULL;
 
 ```sql
 ALTER TABLE examination_record
-    ADD COLUMN "b250" INTEGER,
-    ADD COLUMN "b500" INTEGER,
-    ADD COLUMN "b1k" INTEGER,
-    ADD COLUMN "b2k" INTEGER,
-    ADD COLUMN "b4k" INTEGER,
-    ADD COLUMN "a125" INTEGER,
-    ADD COLUMN "a250" INTEGER,
-    ADD COLUMN "a500" INTEGER,
-    ADD COLUMN "a1k" INTEGER,
-    ADD COLUMN "a2k" INTEGER,
-    ADD COLUMN "a4k" INTEGER,
-    ADD COLUMN "a8k" INTEGER
+    ADD COLUMN "left_b250" INTEGER,
+    ADD COLUMN "left_b500" INTEGER,
+    ADD COLUMN "left_b1k" INTEGER,
+    ADD COLUMN "left_b2k" INTEGER,
+    ADD COLUMN "left_b4k" INTEGER,
+    ADD COLUMN "left_a125" INTEGER,
+    ADD COLUMN "left_a250" INTEGER,
+    ADD COLUMN "left_a500" INTEGER,
+    ADD COLUMN "left_a1k" INTEGER,
+    ADD COLUMN "left_a2k" INTEGER,
+    ADD COLUMN "left_a4k" INTEGER,
+    ADD COLUMN "left_a8k" INTEGER,
+    ADD COLUMN "right_b250" INTEGER,
+    ADD COLUMN "right_b500" INTEGER,
+    ADD COLUMN "right_b1k" INTEGER,
+    ADD COLUMN "right_b2k" INTEGER,
+    ADD COLUMN "right_b4k" INTEGER,
+    ADD COLUMN "right_a125" INTEGER,
+    ADD COLUMN "right_a250" INTEGER,
+    ADD COLUMN "right_a500" INTEGER,
+    ADD COLUMN "right_a1k" INTEGER,
+    ADD COLUMN "right_a2k" INTEGER,
+    ADD COLUMN "right_a4k" INTEGER,
+    ADD COLUMN "right_a8k" INTEGER
 ```
 
 # 新增一列 isAudiogramType
 
 ```sql
 -- 1) 定义枚举类型（如果还未创建过）
-CREATE TYPE isAudiogramType_enum AS ENUM ('auto', 'manual', 'otherhospital', 'unprocessed', 'none');
+CREATE TYPE isAudiogramType_enum AS ENUM ('autoprocessed', 'manual', 'otherhospital', 'unprocessed', 'none');
 
 -- 2) 在 examination_record 表中新增列，使用该枚举类型
 ALTER TABLE examination_record

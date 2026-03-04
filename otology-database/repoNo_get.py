@@ -4,92 +4,6 @@ import json
 import pandas as pd
 from sqlalchemy import create_engine, text, String, Float, DateTime, Integer
 
-
-"""
-数据库触发器
-
-当 examination_record 表每次插入新行时
-根据插入行的 mrn 去 patient_admission_record 查找对应病人姓名
-并把 name 写入 examination_record 的 name 字段。
-
-postgresql里的 Query SQL 输入
-
--- 1) 确保 examination_record 有 name 字段
-ALTER TABLE examination_record
-    ADD COLUMN IF NOT EXISTS name text;
-
--- 2) 创建触发器函数：在插入或更新 mrn 时自动回填 name
-CREATE OR REPLACE FUNCTION trg_examination_record_fill_name()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    -- 仅当 mrn 存在或变动时处理
-    IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.mrn IS DISTINCT FROM OLD.mrn) THEN
-        SELECT par.name
-        INTO NEW.name
-        FROM patient_admission_record AS par
-        WHERE par.mrn = NEW.mrn;
-
-        -- 如果没有匹配，决定策略：可置为空或报错
-        IF NEW.name IS NULL THEN
-            -- 方案 A：允许为空（静默）
-            -- RETURN NEW;
-
-            -- 方案 B：报错，强制必须存在映射
-            RAISE EXCEPTION 'No patient name found for mrn=%', NEW.mrn
-                USING ERRCODE = 'foreign_key_violation';
-        END IF;
-    END IF;
-
-    RETURN NEW;
-END;
-$$;
-
--- 3) 安装触发器：插入前、更新 mrn 前执行
-
-CREATE TRIGGER before_insupd_fill_name
-BEFORE INSERT OR UPDATE OF mrn ON examination_record
-FOR EACH ROW
-EXECUTE FUNCTION trg_examination_record_fill_name();
-
-"""
-
-"""
-examination_record 自动新增 picname 列
-
-ALTER TABLE examination_record
-ADD COLUMN picname text GENERATED ALWAYS AS (
-    COALESCE(extract(year  from repdate)::int::text, '') || '-' ||
-    LPAD((extract(month from repdate)::int)::text, 2, '0') || '-' ||
-    LPAD((extract(day   from repdate)::int)::text, 2, '0') || '-' ||
-    COALESCE(checkitem, '') || '-' ||
-    COALESCE(nrm, '')       || '-' ||
-    COALESCE(name, '')      || '-' ||
-    COALESCE(repo, '')
-) STORED;
-"""
-
-"""
-新增一列 islocalimageexist
-
--- 1) 定义枚举类型（如果还未创建过）
-CREATE TYPE islocalimageexist_enum AS ENUM ('true', 'false', 'lost');
-
--- 2) 在 examination_record 表中新增列，使用该枚举类型
-ALTER TABLE examination_record
-    ADD COLUMN "isLocalImageExist" islocalimageexist_enum;
-
--- 3) 可选：设置默认值（例如默认 'lost'）
-ALTER TABLE examination_record
-    ALTER COLUMN "isLocalImageExist" SET DEFAULT 'lost';
-
--- 4) 可选：为现有行填充默认值
-UPDATE examination_record
-SET "isLocalImageExist" = 'lost'
-WHERE "isLocalImageExist" IS NULL;
-"""
-
 # %% 数据库连接配置
 # 从patient-info-upload.py中参考的数据库配置
 db_config = {
@@ -234,17 +148,35 @@ for mrn in mrn_list:
                 es_records = [
                     record
                     for record in result_data
-                    if record.get("reptype") in ["ES", "CD"]
+                    if record.get("reptype") in ["ES", "CD", "WGK"]
                 ]
 
-                # 删除checkitem中包含"肠镜"或"胃镜"的项目
+                # 创建要删除的项目列表
+                items_to_remove = [
+                    "肠镜",
+                    "胰胆",
+                    "胃镜",
+                    "鼻内",
+                    "鼻咽",
+                    "位置平衡",
+                    "超声",
+                    "前庭",
+                    "睡眠",
+                    "呼气试验",
+                    "动态",
+                    "吸入物",
+                    "支气管",
+                    "探查",
+                    "中耳测试",
+                ]
+
                 filtered_records = []
                 for record in es_records:
-                    # 检查record中是否有checkitem字段，并且该字段不包含"肠镜"或"胃镜"
+                    # 检查record中是否有checkitem字段，并且该字段不包含在删除列表中
                     if "checkitem" in record and isinstance(record["checkitem"], str):
-                        if (
-                            "肠镜" not in record["checkitem"]
-                            and "胃镜" not in record["checkitem"]
+                        # 检查checkitem是否包含任何要删除的项目
+                        if not any(
+                            item in record["checkitem"] for item in items_to_remove
                         ):
                             filtered_records.append(record)
                     else:
@@ -282,6 +214,20 @@ if not repo_df.empty:
     existing_columns = [col for col in selected_columns if col in repo_df.columns]
     # 筛选数据
     filtered_repo_df = repo_df[existing_columns].copy()
+
+    # 数据类型转换
+    # 将repdate列转换为日期格式
+    filtered_repo_df["repdate"] = pd.to_datetime(
+        filtered_repo_df["repdate"], errors="coerce"
+    )
+
+    # 筛选repdate大于2020年1月1日的记录
+    filtered_repo_df = filtered_repo_df[filtered_repo_df["repdate"] > "2020-01-01"]
+
+    # 将checkitem列中的"|"替换为"-"
+    filtered_repo_df["checkitem"] = filtered_repo_df["checkitem"].str.replace(
+        "|", "-", regex=False
+    )
 
     # 打印结果预览
     print("\n筛选后的结果预览:")
@@ -332,8 +278,7 @@ if not repo_df.empty:
                         "series" VARCHAR(20),
                         "mrn" VARCHAR(50),
                         "name" VARCHAR(50),
-                        "picdir" VARCHAR(255),
-                        "isLocalImageExist" ENUM('true', 'false', 'lost')
+                        "picdir" VARCHAR(255)
                     )
                     """
                     )
